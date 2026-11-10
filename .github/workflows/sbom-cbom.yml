@@ -1,6 +1,17 @@
 name: Software & Cryptographic Bill of Materials (SBOM & CBOM)
 
 on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
   workflow_call:
     inputs:
       output_dir:
@@ -26,6 +37,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  pull-requests: write
 
 jobs:
   generate-and-verify-boms:
