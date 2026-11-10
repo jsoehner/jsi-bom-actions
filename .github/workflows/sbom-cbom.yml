@@ -12,27 +12,6 @@ on:
       - main
       - master
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      output_dir:
-        required: true
-        type: string
-        default: "oss"
-      scripts_dir:
-        required: true
-        type: string
-        default: "scripts"
-      docs_path:
-        required: true
-        type: string
-        default: "docs/security"
-      requirements_path:
-        required: true
-        type: string
-        default: "requirements.txt"
-    secrets:
-      GITHUB_TOKEN:
-        required: true
 
 permissions:
   contents: write
@@ -165,7 +144,27 @@ jobs:
           fi
 
       # -------------------------------------------------------------
-      # 7. Upload All BOM Artifacts
+      # 7. Post to Pull Request Comment
+      # -------------------------------------------------------------
+      - name: Post PR Summary Comment
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f ${{ inputs.output_dir }}/crypto-summary.md ]; then
+            # Extract the PQC Scorecard section
+            SUMMARY=$(sed -n '/## 📊 Post-Quantum Migration Scorecard/,/## 🔒 Classical Symmetric & Digest Assets/p' ${{ inputs.output_dir }}/crypto-summary.md)
+            
+            echo "Posting summary to PR..."
+            gh pr comment ${{ github.event.pull_request.number }} --body "### 🛡️ Cryptographic Audit Summary
+
+$SUMMARY
+
+---
+Full audit report can be found in the repository at ${{ inputs.docs_path }}/CRYPTOGRAPHIC_AUDIT.md"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------------------------------------
+      # 8. Upload All BOM Artifacts
       # -------------------------------------------------------------
       - name: Upload BOM Artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -173,3 +172,4 @@ jobs:
           name: bom-artifacts
           path: ${{ inputs.output_dir }}/
           retention-days: 90
+",replace_from:

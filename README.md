@@ -9,6 +9,7 @@ A reusable GitHub Action for generating Software Bills of Materials (SBOM) and C
 - **CBOM Reconciliation**: Maps discovered call sites to known cryptographic profiles to identify "unassimilated" (unknown) crypto usage.
 - **PQC Readiness**: Automatically identifies "Quantum-Vulnerable" algorithms and provides a migration score based on NIST FIPS 203, 204, and 205.
 - **Automated Reporting**: Generates a `CRYPTOGRAPHIC_AUDIT.md` report and uploads it to your repository.
+- **PR Integration**: Automatically posts a summary of the cryptographic audit and PQC migration scorecard directly onto your Pull Request for immediate visibility.
 
 ## Quick Start
 
