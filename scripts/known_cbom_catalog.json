@@ -1,7 +1,7 @@
 {
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
-  "catalogVersion": "2.0.0",
-  "description": "Multi-Ecosystem Cryptographic Bill of Materials (CBOM) Profiles and Attestations for Third-Party Binaries & Dependencies across Python, Node/TS, Go, Rust, Java/JVM, .NET/NuGet, Ruby, PHP, Swift, Dart, Elixir, and C/C++",
+  "catalogVersion": "2.1.0",
+  "description": "Curated Cryptographic Bill of Materials (CBOM) profiles for open source components across Swift, Python, Node, Go, Rust, Java, .NET, Ruby, and PHP ecosystems.",
   "components": [
     {
       "name": "tomcat-embed-core",
@@ -1016,6 +1016,887 @@
       "category": "ci-cd-action",
       "confidence": "HIGH",
       "source": "Verified CI/CD DevSecOps Pipeline Action (Pinned 40-char Commit SHA)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "swift-crypto",
+      "purlPattern": "^pkg:swift/(?:github\\.com/)?apple/swift-crypto(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "Apple SwiftCrypto / BoringSSL Engine Specification",
+      "cryptoAssets": [
+        {
+          "name": "SwiftCrypto Asymmetric & Elliptic Curve Engine",
+          "primitive": "signature",
+          "algorithm": "Curve25519 / P-256 / P-384 / P-521",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256/384/521",
+          "remediation": "Transition to Apple CryptoKit MLKEM768 / MLDSA65 (Swift 6.1+)"
+        },
+        {
+          "name": "SwiftCrypto Symmetric AEAD (AES-GCM / ChaChaPoly)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant against Grover key search"
+        }
+      ]
+    },
+    {
+      "name": "CryptoSwift",
+      "purlPattern": "^pkg:(?:swift/(?:github\\.com/)?krzyzanowskim/CryptoSwift|cocoapods/CryptoSwift)(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "CryptoSwift Pure Swift Cryptography Suite",
+      "cryptoAssets": [
+        {
+          "name": "CryptoSwift Symmetric Ciphers & Hashes",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256 / ChaCha20 / SHA3-256 / Argon2",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant symmetric primitive"
+        },
+        {
+          "name": "CryptoSwift Legacy / Weak Primitives",
+          "primitive": "block-cipher",
+          "algorithm": "Blowfish / Rabbit / MD5 / SHA-1",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "64/128/160",
+          "remediation": "Deprecate weak legacy ciphers in favor of AES-256-GCM / ChaChaPoly"
+        }
+      ]
+    },
+    {
+      "name": "secp256k1-swift",
+      "purlPattern": "^pkg:(?:swift/(?:github\\.com/)?GigaBitcoin/secp256k1\\.swift|cocoapods/secp256k1\\.swift)(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "libsecp256k1 Swift Bindings (Bitcoin / Ethereum)",
+      "cryptoAssets": [
+        {
+          "name": "secp256k1 ECDSA & Schnorr Signatures",
+          "primitive": "signature",
+          "algorithm": "ECDSA-secp256k1 / Schnorr",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256",
+          "remediation": "At risk of Shor's algorithm; migrate to ML-DSA-65 or hybrid signature schemes"
+        }
+      ]
+    },
+    {
+      "name": "liboqs-swift",
+      "purlPattern": "^pkg:swift/(?:github\\.com/)?open-quantum-safe/liboqs-swift(@.*)?$",
+      "category": "post-quantum-library",
+      "confidence": "HIGH",
+      "source": "Open Quantum Safe liboqs Swift Wrapper",
+      "cryptoAssets": [
+        {
+          "name": "Open Quantum Safe KEM & Signature Algorithms",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65 / Falcon-512 / SLH-DSA",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "FIPS 203 / FIPS 204 / FIPS 205",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        }
+      ]
+    },
+    {
+      "name": "swift-certificates",
+      "purlPattern": "^pkg:swift/(?:github\\.com/)?apple/swift-certificates(@.*)?$",
+      "category": "pki-library",
+      "confidence": "HIGH",
+      "source": "Apple Swift Certificates X.509 PKI Engine",
+      "cryptoAssets": [
+        {
+          "name": "Swift X.509 Certificate Validation Engine",
+          "primitive": "certificate",
+          "algorithm": "X.509 PKI (RSA / ECDSA / Ed25519)",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "RSA-2048 / ECDSA-P256",
+          "remediation": "Transition CA roots and leaf certificates to ML-DSA-65 / SLH-DSA"
+        }
+      ]
+    },
+    {
+      "name": "swift-nio-ssl",
+      "purlPattern": "^pkg:swift/(?:github\\.com/)?apple/swift-nio-ssl(@.*)?$",
+      "category": "network-security",
+      "confidence": "HIGH",
+      "source": "SwiftNIO SSL / TLS Transport Protocol Engine",
+      "cryptoAssets": [
+        {
+          "name": "SwiftNIO TLS Transport Layer",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-P256 / X25519",
+          "remediation": "Enable hybrid post-quantum key exchange (X25519MLKEM768)"
+        }
+      ]
+    },
+    {
+      "name": "vapor-jwt",
+      "purlPattern": "^pkg:swift/(?:github\\.com/)?vapor/jwt(@.*)?$",
+      "category": "identity-auth",
+      "confidence": "HIGH",
+      "source": "Vapor Swift JWT / JWS / JWE Specification",
+      "cryptoAssets": [
+        {
+          "name": "Vapor JWT Signature Verification (RS256 / ES256 / EdDSA)",
+          "primitive": "signature",
+          "algorithm": "RS256 / ES256 / EdDSA",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "RSA-2048 / P-256",
+          "remediation": "Migrate JWT tokens to ML-DSA-65 or hybrid signatures"
+        },
+        {
+          "name": "Vapor JWT Symmetric Signing (HS256 / HS384 / HS512)",
+          "primitive": "mac",
+          "algorithm": "HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant HMAC symmetric signing"
+        }
+      ]
+    },
+    {
+      "name": "httpx",
+      "purlPattern": "^pkg:pypi/httpx(@.*)?$",
+      "category": "network-client",
+      "confidence": "HIGH",
+      "source": "HTTPX Async HTTP & TLS Transport",
+      "cryptoAssets": [
+        {
+          "name": "HTTPX TLS 1.3 Client Engine",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.3 / X25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-X25519 / RSA-2048",
+          "remediation": "Upgrade Python runtime to OpenSSL 3.5+ to enable X25519MLKEM768 hybrid TLS"
+        }
+      ]
+    },
+    {
+      "name": "aiohttp",
+      "purlPattern": "^pkg:pypi/aiohttp(@.*)?$",
+      "category": "network-client",
+      "confidence": "HIGH",
+      "source": "aiohttp Async Web & Client TLS",
+      "cryptoAssets": [
+        {
+          "name": "aiohttp SSL/TLS Client & Server Transport",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "RSA-2048 / ECDSA-P256",
+          "remediation": "Enable hybrid post-quantum key exchange (X25519MLKEM768)"
+        }
+      ]
+    },
+    {
+      "name": "paramiko",
+      "purlPattern": "^pkg:pypi/paramiko(@.*)?$",
+      "category": "network-security",
+      "confidence": "HIGH",
+      "source": "Paramiko SSHv2 Cryptographic Protocol Suite",
+      "cryptoAssets": [
+        {
+          "name": "Paramiko SSHv2 Key Exchange & Host Keys",
+          "primitive": "protocol",
+          "algorithm": "SSHv2 (diffie-hellman-group-exchange / rsa-sha2-512 / ecdsa-sha2-nistp256)",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "DH-2048 / RSA-3072 / P-256",
+          "remediation": "Adopt OpenSSH 9.0+ hybrid sntrup761x25519 or ML-KEM-768 key exchange"
+        },
+        {
+          "name": "Paramiko SSHv2 Symmetric Ciphers (AES-CTR / ChaCha20)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-CTR / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant symmetric SSH cipher"
+        }
+      ]
+    },
+    {
+      "name": "argon2-cffi",
+      "purlPattern": "^pkg:pypi/argon2-cffi(?:-bindings)?(@.*)?$",
+      "category": "kdf-library",
+      "confidence": "HIGH",
+      "source": "Argon2 Password Hashing (RFC 9106)",
+      "cryptoAssets": [
+        {
+          "name": "Argon2id Memory-Hard KDF",
+          "primitive": "kdf",
+          "algorithm": "Argon2id",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant memory-hard key derivation function"
+        }
+      ]
+    },
+    {
+      "name": "pynacl",
+      "purlPattern": "^pkg:pypi/pynacl(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "PyNaCl / libsodium Python Binding",
+      "cryptoAssets": [
+        {
+          "name": "NaCl / libsodium Asymmetric Public-Key Crypto",
+          "primitive": "signature",
+          "algorithm": "Ed25519 / Curve25519 (X25519)",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256",
+          "remediation": "Shor's vulnerable; upgrade to hybrid or ML-DSA-65 / ML-KEM-768"
+        },
+        {
+          "name": "NaCl / libsodium Secret-Key Authenticated Encryption",
+          "primitive": "stream-cipher",
+          "algorithm": "XSalsa20-Poly1305 / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant 256-bit symmetric AEAD"
+        }
+      ]
+    },
+    {
+      "name": "authlib",
+      "purlPattern": "^pkg:pypi/authlib(@.*)?$",
+      "category": "identity-auth",
+      "confidence": "HIGH",
+      "source": "Authlib OAuth 2.0 / OIDC / JOSE Suite",
+      "cryptoAssets": [
+        {
+          "name": "Authlib JWS / JWE Token Verification (RSA / ECDSA)",
+          "primitive": "signature",
+          "algorithm": "RS256 / ES256 / EdDSA",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "RSA-2048 / P-256",
+          "remediation": "Migrate signature keys to ML-DSA-65"
+        }
+      ]
+    },
+    {
+      "name": "passlib",
+      "purlPattern": "^pkg:pypi/passlib(@.*)?$",
+      "category": "kdf-library",
+      "confidence": "HIGH",
+      "source": "Passlib Password Hashing Framework",
+      "cryptoAssets": [
+        {
+          "name": "Passlib Modern Password Hashes (bcrypt / argon2 / pbkdf2)",
+          "primitive": "kdf",
+          "algorithm": "bcrypt / Argon2 / PBKDF2",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "128/256",
+          "remediation": "Quantum-Resistant against Grover key space search"
+        }
+      ]
+    },
+    {
+      "name": "fastapi-flask-django-web",
+      "purlPattern": "^pkg:pypi/(?:fastapi|flask|django|starlette|uvicorn|werkzeug)(@.*)?$",
+      "category": "web-framework",
+      "confidence": "HIGH",
+      "source": "Python Web Framework Security Architecture",
+      "cryptoAssets": [
+        {
+          "name": "Web Framework Session & Cookie Cryptography",
+          "primitive": "mac",
+          "algorithm": "HMAC-SHA256 / PBKDF2-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant symmetric session signing"
+        }
+      ]
+    },
+    {
+      "name": "crypto-js",
+      "purlPattern": "^pkg:npm/crypto-js(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "CryptoJS JavaScript Cryptography Standard",
+      "cryptoAssets": [
+        {
+          "name": "CryptoJS Symmetric Ciphers & Digests",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256 / SHA-256 / HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant symmetric ciphers"
+        },
+        {
+          "name": "CryptoJS Legacy Hashes & Ciphers",
+          "primitive": "hash",
+          "algorithm": "MD5 / SHA-1 / RC4 / TripleDES",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "128/160",
+          "remediation": "Deprecate legacy weak algorithms; use AES-256-GCM / SHA-256"
+        }
+      ]
+    },
+    {
+      "name": "tweetnacl",
+      "purlPattern": "^pkg:npm/tweetnacl(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "TweetNaCl.js Port of TweetNaCl / libsodium",
+      "cryptoAssets": [
+        {
+          "name": "TweetNaCl Ed25519 & Curve25519 (X25519)",
+          "primitive": "signature",
+          "algorithm": "Ed25519 / X25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256",
+          "remediation": "Shor's vulnerable; migrate to @noble/post-quantum (ML-KEM / ML-DSA)"
+        },
+        {
+          "name": "TweetNaCl SecretBox Authenticated Encryption",
+          "primitive": "stream-cipher",
+          "algorithm": "XSalsa20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant 256-bit symmetric stream cipher"
+        }
+      ]
+    },
+    {
+      "name": "bcryptjs",
+      "purlPattern": "^pkg:npm/bcrypt(?:js)?(@.*)?$",
+      "category": "kdf-library",
+      "confidence": "HIGH",
+      "source": "bcrypt Password Hashing Specification",
+      "cryptoAssets": [
+        {
+          "name": "bcrypt Password Hash & KDF",
+          "primitive": "kdf",
+          "algorithm": "bcrypt",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "192",
+          "remediation": "Quantum-Resistant password hashing"
+        }
+      ]
+    },
+    {
+      "name": "passport",
+      "purlPattern": "^pkg:npm/(?:passport|passport-jwt|passport-oauth2)(@.*)?$",
+      "category": "identity-auth",
+      "confidence": "HIGH",
+      "source": "Passport.js Authentication Strategy",
+      "cryptoAssets": [
+        {
+          "name": "Passport.js Authentication Token Verification",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256 / HMAC-SHA256",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048/256",
+          "remediation": "Rotate asymmetric signing keys to ML-DSA-65"
+        }
+      ]
+    },
+    {
+      "name": "express-fastify-web",
+      "purlPattern": "^pkg:npm/(?:express|fastify|koa|helmet)(@.*)?$",
+      "category": "web-framework",
+      "confidence": "HIGH",
+      "source": "Node.js Web Framework Security Standard",
+      "cryptoAssets": [
+        {
+          "name": "Web Session & Cookie HMAC Verification",
+          "primitive": "mac",
+          "algorithm": "HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant symmetric session signing"
+        }
+      ]
+    },
+    {
+      "name": "golang-jwt",
+      "purlPattern": "^pkg:golang/github\\.com/golang-jwt/jwt(?:/v[0-9]+)?(@.*)?$",
+      "category": "identity-auth",
+      "confidence": "HIGH",
+      "source": "Golang JWT RFC 7519 Specification",
+      "cryptoAssets": [
+        {
+          "name": "Golang JWT Asymmetric Verification (RS256/ES256/EdDSA)",
+          "primitive": "signature",
+          "algorithm": "RS256 / ES256 / EdDSA",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "RSA-2048 / P-256",
+          "remediation": "Adopt ML-DSA-65 signatures for JWT tokens"
+        },
+        {
+          "name": "Golang JWT Symmetric Signing (HS256/HS384/HS512)",
+          "primitive": "mac",
+          "algorithm": "HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant symmetric HMAC signing"
+        }
+      ]
+    },
+    {
+      "name": "cloudflare-circl",
+      "purlPattern": "^pkg:golang/github\\.com/cloudflare/circl(@.*)?$",
+      "category": "post-quantum-library",
+      "confidence": "HIGH",
+      "source": "Cloudflare CIRCL Post-Quantum & Elliptic Curve Suite",
+      "cryptoAssets": [
+        {
+          "name": "CIRCL Post-Quantum KEM & Signature Algorithms",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / Kyber / ML-DSA-65 / Dilithium / FrodoKEM",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "NIST FIPS 203 / FIPS 204",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        }
+      ]
+    },
+    {
+      "name": "go-secp256k1",
+      "purlPattern": "^pkg:golang/github\\.com/decred/dcrd/dcrec/secp256k1(?:/v[0-9]+)?(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "Decred secp256k1 Go Elliptic Curve Implementation",
+      "cryptoAssets": [
+        {
+          "name": "secp256k1 ECDSA & Schnorr Signatures",
+          "primitive": "signature",
+          "algorithm": "ECDSA-secp256k1 / Schnorr",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256",
+          "remediation": "Vulnerable to Shor's algorithm; plan transition to ML-DSA-65"
+        }
+      ]
+    },
+    {
+      "name": "hashicorp-vault-api",
+      "purlPattern": "^pkg:golang/github\\.com/hashicorp/vault/api(@.*)?$",
+      "category": "secrets-management",
+      "confidence": "HIGH",
+      "source": "HashiCorp Vault Secrets & Transit KMS API",
+      "cryptoAssets": [
+        {
+          "name": "Vault TLS Transport & Transit Encryption",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.3 / AES-256-GCM / Ed25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256",
+          "remediation": "Configure Vault TLS listeners for hybrid post-quantum cipher suites"
+        }
+      ]
+    },
+    {
+      "name": "google-grpc-go",
+      "purlPattern": "^pkg:golang/google\\.golang\\.org/grpc(@.*)?$",
+      "category": "rpc-framework",
+      "confidence": "HIGH",
+      "source": "gRPC Go TLS & Credentials Specification",
+      "cryptoAssets": [
+        {
+          "name": "gRPC TLS & mTLS Channel Security",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3 (mTLS)",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-P256 / RSA-2048",
+          "remediation": "Enable hybrid X25519MLKEM768 key exchange on gRPC TLS credentials"
+        }
+      ]
+    },
+    {
+      "name": "rustls",
+      "purlPattern": "^pkg:cargo/rustls(@.*)?$",
+      "category": "network-security",
+      "confidence": "HIGH",
+      "source": "rustls Modern Memory-Safe TLS Library",
+      "cryptoAssets": [
+        {
+          "name": "rustls Post-Quantum Hybrid TLS 1.3 Key Exchange",
+          "primitive": "kem",
+          "algorithm": "X25519MLKEM768 / ML-KEM-768",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "X25519+ML-KEM-768",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        },
+        {
+          "name": "rustls Classical TLS Transport Protocol",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-P256 / X25519",
+          "remediation": "Ensure rustls is configured with aws-lc-rs or ring PQC provider"
+        }
+      ]
+    },
+    {
+      "name": "aws-lc-rs",
+      "purlPattern": "^pkg:cargo/aws-lc-rs(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "AWS-LC-RS FIPS & Post-Quantum Cryptography",
+      "cryptoAssets": [
+        {
+          "name": "AWS-LC Post-Quantum KEM & Signature Algorithms",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65 / Kyber",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "FIPS 203 / FIPS 204",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        },
+        {
+          "name": "AWS-LC FIPS Classical Cryptography",
+          "primitive": "asymmetric-cipher",
+          "algorithm": "RSA-3072 / ECDSA-P384 / AES-256-GCM",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "3072/384",
+          "remediation": "Upgrade asymmetric keys to ML-KEM / ML-DSA"
+        }
+      ]
+    },
+    {
+      "name": "rust-symmetric-crates",
+      "purlPattern": "^pkg:cargo/(?:aes-gcm|chacha20poly1305|sha2|sha3|blake3|argon2)(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "RustCrypto Verified Symmetric Ciphers & Hashes",
+      "cryptoAssets": [
+        {
+          "name": "RustCrypto Quantum-Resistant Symmetric Algorithms",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305 / SHA3-256 / BLAKE3",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant against Grover key search"
+        }
+      ]
+    },
+    {
+      "name": "bcpqc-jdk18on",
+      "purlPattern": "^pkg:maven/org\\.bouncycastle/bcpqc-jdk18on(@.*)?$",
+      "category": "post-quantum-library",
+      "confidence": "HIGH",
+      "source": "Bouncy Castle Post-Quantum JCE / JCA Provider",
+      "cryptoAssets": [
+        {
+          "name": "Bouncy Castle PQC KEM & Signature Algorithms",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65 / SPHINCS+ / LMS / XMSS",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "FIPS 203 / FIPS 204 / FIPS 205",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        }
+      ]
+    },
+    {
+      "name": "google-crypto-tink",
+      "purlPattern": "^pkg:(?:maven/com\\.google\\.crypto\\.tink/tink|pypi/tink|golang/github\\.com/google/tink/go)(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "Google Tink Multi-Language Cryptographic Library",
+      "cryptoAssets": [
+        {
+          "name": "Google Tink Asymmetric Encryption & Signatures",
+          "primitive": "signature",
+          "algorithm": "ECDSA-P256 / Ed25519 / RSA-SSA-PSS",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256/2048",
+          "remediation": "Upgrade Tink keysets to post-quantum hybrid templates"
+        },
+        {
+          "name": "Google Tink Symmetric AEAD & Streaming Encryption",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305 / XChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant 256-bit symmetric AEAD"
+        }
+      ]
+    },
+    {
+      "name": "okhttp",
+      "purlPattern": "^pkg:maven/com\\.squareup\\.okhttp3/okhttp(@.*)?$",
+      "category": "network-client",
+      "confidence": "HIGH",
+      "source": "Square OkHttp HTTP/2 & TLS Transport",
+      "cryptoAssets": [
+        {
+          "name": "OkHttp TLS 1.3 Connection Engine",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-P256 / RSA-2048",
+          "remediation": "Pair with Conscrypt or Java 25 JSSE for X25519MLKEM768 hybrid TLS"
+        }
+      ]
+    },
+    {
+      "name": "dotnet-security-cryptography",
+      "purlPattern": "^pkg:nuget/System\\.Security\\.Cryptography\\.(?:Algorithms|Cng|OpenSsl)(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": ".NET Standard Security Cryptography Engine",
+      "cryptoAssets": [
+        {
+          "name": ".NET 9+ Post-Quantum Cryptography",
+          "primitive": "kem",
+          "algorithm": "MLKem768 / MLDsa65 / SlhDsa",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "FIPS 203 / FIPS 204 / FIPS 205",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        },
+        {
+          "name": ".NET Classical Asymmetric Cryptography (RSA / ECDsa)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDsa-P256",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048/256",
+          "remediation": "Transition to .NET 9+ System.Security.Cryptography.MLDsa"
+        }
+      ]
+    },
+    {
+      "name": "paragonie-sodium-compat",
+      "purlPattern": "^pkg:composer/paragonie/sodium_compat(@.*)?$",
+      "category": "cryptographic-library",
+      "confidence": "HIGH",
+      "source": "Paragon Initiative libsodium Polyfill for PHP",
+      "cryptoAssets": [
+        {
+          "name": "Sodium Compat Asymmetric Crypto (Ed25519 / X25519)",
+          "primitive": "signature",
+          "algorithm": "Ed25519 / X25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256",
+          "remediation": "Shor's vulnerable; prepare transition to post-quantum hybrid signatures"
+        },
+        {
+          "name": "Sodium Compat Secret-Box Encryption",
+          "primitive": "stream-cipher",
+          "algorithm": "XSalsa20-Poly1305 / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant 256-bit symmetric AEAD"
+        }
+      ]
+    },
+    {
+      "name": "ruby-jwt",
+      "purlPattern": "^pkg:gem/jwt(@.*)?$",
+      "category": "identity-auth",
+      "confidence": "HIGH",
+      "source": "Ruby JWT RFC 7519 Specification",
+      "cryptoAssets": [
+        {
+          "name": "Ruby JWT Asymmetric Signature Verification",
+          "primitive": "signature",
+          "algorithm": "RS256 / ES256 / EdDSA",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "RSA-2048 / P-256",
+          "remediation": "Migrate signature keys to post-quantum ML-DSA-65"
+        }
+      ]
+    },
+    {
+      "name": "botocore-boto3",
+      "purlPattern": "^pkg:pypi/(?:botocore|boto3)(@.*)?$",
+      "category": "cloud-sdk",
+      "confidence": "HIGH",
+      "source": "AWS SDK for Python TLS & SigV4 Specification",
+      "cryptoAssets": [
+        {
+          "name": "AWS SigV4 Request Authentication",
+          "primitive": "mac",
+          "algorithm": "HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant HMAC-SHA256 symmetric request signing"
+        },
+        {
+          "name": "AWS Endpoint TLS Transport Protocol",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-P256 / RSA-2048",
+          "remediation": "Enable AWS KMS Post-Quantum hybrid key exchange (X25519MLKEM768)"
+        }
+      ]
+    },
+    {
+      "name": "google-cloud-sdk-python",
+      "purlPattern": "^pkg:pypi/google-cloud-.*(@.*)?$",
+      "category": "cloud-sdk",
+      "confidence": "HIGH",
+      "source": "Google Cloud Client Libraries for Python",
+      "cryptoAssets": [
+        {
+          "name": "Google Cloud Service API TLS Transport",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.3 / gRPC mTLS",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-X25519 / RSA-2048",
+          "remediation": "Enable Google Cloud Certificate Authority Service (CAS) PQC algorithms"
+        }
+      ]
+    },
+    {
+      "name": "azure-identity-python",
+      "purlPattern": "^pkg:pypi/azure-identity(@.*)?$",
+      "category": "cloud-sdk",
+      "confidence": "HIGH",
+      "source": "Azure Identity SDK Token & MSAL Authentication",
+      "cryptoAssets": [
+        {
+          "name": "Azure Entra ID JWT / OAuth 2.0 Client Authentication",
+          "primitive": "signature",
+          "algorithm": "RS256 (RSA-2048)",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048",
+          "remediation": "Plan migration to Azure Key Vault Managed HSM PQC keys"
+        }
+      ]
+    },
+    {
+      "name": "netty-tcnative",
+      "purlPattern": "^pkg:maven/io\\.netty/netty-tcnative(?:-boringssl-static)?(@.*)?$",
+      "category": "network-security",
+      "confidence": "HIGH",
+      "source": "Netty OpenSSL / BoringSSL Native Transport",
+      "cryptoAssets": [
+        {
+          "name": "Netty Native BoringSSL TLS Transport",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.3 / X25519MLKEM768",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "X25519+ML-KEM-768",
+          "remediation": "Post-Quantum hybrid TLS enabled natively via BoringSSL"
+        }
+      ]
+    },
+    {
+      "name": "wolfssl",
+      "purlPattern": "^pkg:(?:generic/wolfssl|conan/wolfssl|vcpkg/wolfssl)(@.*)?$",
+      "category": "embedded-crypto",
+      "confidence": "HIGH",
+      "source": "wolfSSL Embedded SSL/TLS & PQC Library",
+      "cryptoAssets": [
+        {
+          "name": "wolfSSL Post-Quantum Cryptography",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65 / LMS / XMSS",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "FIPS 203 / FIPS 204 / RFC 8554",
+          "remediation": "Standardized Post-Quantum Ready implementation"
+        }
+      ]
+    },
+    {
+      "name": "mbedtls",
+      "purlPattern": "^pkg:(?:generic/mbedtls|conan/mbedtls|vcpkg/mbedtls)(@.*)?$",
+      "category": "embedded-crypto",
+      "confidence": "HIGH",
+      "source": "Mbed TLS Embedded Cryptographic Library",
+      "cryptoAssets": [
+        {
+          "name": "Mbed TLS Asymmetric Primitives",
+          "primitive": "asymmetric-cipher",
+          "algorithm": "RSA-2048 / ECDSA-P256",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048/256",
+          "remediation": "Pair with Open Quantum Safe liboqs for post-quantum hybrid integration"
+        },
+        {
+          "name": "Mbed TLS Symmetric AEAD (AES-GCM / ChaCha20)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Quantum-Resistant against Grover key space search"
+        }
+      ]
+    },
+    {
+      "name": "gnutls",
+      "purlPattern": "^pkg:(?:deb/debian/libgnutls.*|deb/ubuntu/libgnutls.*|rpm/libgnutls.*)(@.*)?$",
+      "category": "os-crypto",
+      "confidence": "HIGH",
+      "source": "GnuTLS Cryptographic Transport Protocol",
+      "cryptoAssets": [
+        {
+          "name": "GnuTLS Transport Protocol",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.2 / TLS 1.3",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "ECDH-P256 / RSA-2048",
+          "remediation": "Upgrade GnuTLS packages supporting Post-Quantum hybrid cipher suites"
+        }
+      ]
+    },
+    {
+      "name": "pydantic",
+      "purlPattern": "^pkg:pypi/pydantic(?:-core)?(@.*)?$",
+      "category": "data-validation",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Data Validation)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "sqlalchemy",
+      "purlPattern": "^pkg:pypi/SQLAlchemy(@.*)?$",
+      "category": "database-orm",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Relational ORM)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "pytest",
+      "purlPattern": "^pkg:pypi/pytest.*(@.*)?$",
+      "category": "testing-toolchain",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Test Runner Framework)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "typescript-compiler",
+      "purlPattern": "^pkg:npm/typescript(@.*)?$",
+      "category": "build-toolchain",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (TypeScript Transpiler)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "esbuild",
+      "purlPattern": "^pkg:npm/esbuild(@.*)?$",
+      "category": "build-toolchain",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (JavaScript Bundler)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "webpack",
+      "purlPattern": "^pkg:npm/webpack.*(@.*)?$",
+      "category": "build-toolchain",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Module Bundler)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "react-ecosystem",
+      "purlPattern": "^pkg:npm/react(?:-dom)?(@.*)?$",
+      "category": "frontend-ui",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (UI Component Library)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "lodash",
+      "purlPattern": "^pkg:npm/lodash.*(@.*)?$",
+      "category": "utility-library",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (JavaScript Utilities)",
       "cryptoAssets": []
     }
   ]

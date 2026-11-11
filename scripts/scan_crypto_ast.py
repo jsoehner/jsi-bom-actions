@@ -3,28 +3,31 @@
 scan_crypto_ast.py - Multi-Language Semantic AST & Cryptographic Asset Scanner
 
 Scans source code, configurations, Infrastructure-as-Code (IaC), SQL scripts,
-and PKI/certificate files across 18+ programming languages and formats:
+and PKI/certificate files across 25+ programming languages and formats:
+  - Swift (.swift - Apple CryptoKit, MLKEM768/1024, MLDSA65/87, SecKey, CommonCrypto, SwiftCrypto)
+  - Objective-C / Objective-C++ (.m, .mm - CommonCrypto, Security.framework)
   - Python (native AST + regex call-site analysis)
   - JavaScript / TypeScript / Node.js / WebCrypto (.js, .ts, .jsx, .tsx, .mjs, .cjs)
   - Go (.go - standard library crypto/*, crypto/mlkem, golang.org/x/crypto, circl)
-  - Java / Kotlin / Scala (.java, .kt, .kts, .scala - JCA/JCE/JSSE, BouncyCastle, KEM)
+  - Java / Kotlin / Scala (.java, .kt, .kts, .scala - JCA/JCE/JSSE, BouncyCastle PQC, KEM)
   - Rust (.rs - ring, rustls, RustCrypto, dalek, pqcrypto, ml-kem, ml-dsa, oqs)
   - C# / .NET (.cs - System.Security.Cryptography, .NET 9+ MLKem/MLDsa/SlhDsa, BouncyCastle)
   - C / C++ (.c, .cpp, .cc, .cxx, .h, .hpp - OpenSSL EVP, BoringSSL, libsodium, mbedTLS, wolfSSL, liboqs)
   - Ruby (.rb - OpenSSL, Digest, RbNaCl, BCrypt, Argon2, JWT)
   - PHP (.php - OpenSSL, Sodium, Hash, Password Hashing)
-  - Swift (.swift - Apple CryptoKit, MLKEM768/1024, MLDSA65/87, SecKey, CommonCrypto)
   - Dart / Flutter (.dart - cryptography, pointycastle, crypto)
-  - Elixir / Erlang (.ex, .exs, .erl - :crypto, :public_key, Plug.Crypto, Argon2, Bcrypt)
+  - Elixir / Erlang (.ex, .exs, .erl, .hrl - :crypto, :public_key, Plug.Crypto, Argon2, Bcrypt)
+  - Haskell (.hs, .lhs - Cryptonite, Crypto.PubKey, Crypto.Cipher)
+  - Zig (.zig - std.crypto.aead, std.crypto.sign, std.crypto.hash)
+  - Clojure / Groovy (.clj, .cljs, .cljc, .groovy - Java crypto interop)
+  - Perl (.pl, .pm - Crypt::OpenSSL, Crypt::PK, Crypt::Digest)
+  - Lua (.lua - crypto, openssl)
+  - R (.R, .r - openssl, sodium)
+  - Solidity / Vyper (.sol, .vy - keccak256, ecrecover)
+  - Julia (.jl - OpenSSL, Nettle)
   - Shell / PowerShell (.sh, .bash, .ps1 - openssl CLI, ssh-keygen, gpg, cosign)
   - SQL (.sql - pgcrypto, AES_ENCRYPT, SHA2, HASHBYTES)
-  - IaC / Config / PKI (.tf, .hcl, .conf, .nginx, .pem, .crt, .cer, Dockerfile)
-
-Discovers all 4 CycloneDX 1.6 cryptographic asset types:
-  1. algorithm (ciphers, asymmetric primitives, PQC KEM/signatures, hashes, MACs, KDFs, CSPRNGs)
-  2. protocol (TLS, SSH, mTLS, OAuth2/OIDC, IPsec, WireGuard, QUIC)
-  3. certificate (X.509 certificates, PEM/CRT bundles, ACM/PKI resources)
-  4. related-crypto-material (public/private key definitions, KMS/HSM keys, keystores, nonces/salts)
+  - IaC / Config / PKI (.tf, .hcl, .conf, .nginx, .pem, .crt, .cer, .json, .yaml, .yml, .env, Dockerfile)
 
 Reconciles all discovered assets and call-site occurrences into CycloneDX CBOM (oss/cbom.json).
 """
@@ -50,6 +53,79 @@ from typing import List, Dict, Any, Optional, Tuple, Set
 #   mode: optional block/stream cipher mode
 #   oid: optional ASN.1 OID
 CRYPTO_PATTERNS: List[Dict[str, Any]] = [
+    # --- Swift Apple CryptoKit PQC KEM & Signatures (Swift 6.1+ / macOS 15+ / iOS 18+) ---
+    {
+        "pattern": r"\b(?:CryptoKit\.)?MLKEM1024(?:\.PrivateKey|\.PublicKey|\.EncapsulatedKey)?\b",
+        "name": "ML-KEM-1024",
+        "primitive": "kem",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "1024",
+        "std": "NIST FIPS 203 (Apple CryptoKit / Swift)",
+        "oid": "2.16.840.1.101.3.4.4.3",
+    },
+    {
+        "pattern": r"\b(?:CryptoKit\.)?MLKEM512(?:\.PrivateKey|\.PublicKey|\.EncapsulatedKey)?\b",
+        "name": "ML-KEM-512",
+        "primitive": "kem",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "512",
+        "std": "NIST FIPS 203 (Apple CryptoKit / Swift)",
+        "oid": "2.16.840.1.101.3.4.4.1",
+    },
+    {
+        "pattern": r"\b(?:CryptoKit\.)?MLKEM768(?:\.PrivateKey|\.PublicKey|\.EncapsulatedKey)?\b",
+        "name": "ML-KEM-768",
+        "primitive": "kem",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "768",
+        "std": "NIST FIPS 203 (Apple CryptoKit / Swift)",
+        "oid": "2.16.840.1.101.3.4.4.2",
+    },
+    {
+        "pattern": r"\b(?:CryptoKit\.)?MLDSA87(?:\.Signing)?(?:\.PrivateKey|\.PublicKey)?\b",
+        "name": "ML-DSA-87",
+        "primitive": "signature",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "87",
+        "std": "NIST FIPS 204 (Apple CryptoKit / Swift)",
+        "oid": "2.16.840.1.101.3.4.3.19",
+    },
+    {
+        "pattern": r"\b(?:CryptoKit\.)?MLDSA44(?:\.Signing)?(?:\.PrivateKey|\.PublicKey)?\b",
+        "name": "ML-DSA-44",
+        "primitive": "signature",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "44",
+        "std": "NIST FIPS 204 (Apple CryptoKit / Swift)",
+        "oid": "2.16.840.1.101.3.4.3.17",
+    },
+    {
+        "pattern": r"\b(?:CryptoKit\.)?MLDSA65(?:\.Signing)?(?:\.PrivateKey|\.PublicKey)?\b",
+        "name": "ML-DSA-65",
+        "primitive": "signature",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "65",
+        "std": "NIST FIPS 204 (Apple CryptoKit / Swift)",
+        "oid": "2.16.840.1.101.3.4.3.18",
+    },
+    {
+        "pattern": r"\b(?:sec_protocol_options_set_tls_hybrid_key_exchange|sec_protocol_options_append_tls_ciphersuite)\b",
+        "name": "Apple-Network-TLS-Hybrid-PQC",
+        "primitive": "protocol",
+        "asset_type": "protocol",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "X25519+ML-KEM-768",
+        "std": "Apple Network.framework TLS 1.3 / IETF Hybrid KEM",
+    },
+    # --- Stateful Hash-Based Signatures (NIST SP 800-208 / RFC 8554 / RFC 8391) ---
+    {
+        "pattern": r"\b(?:LMS[-_]?SHA256|XMSS[-_]?SHA256|HSS[-_]?LMS|XMSSMT|LMSKeyPairGenerator|XMSSKeyPairGenerator)\b",
+        "name": "LMS/XMSS-Stateful-Hash-Signature",
+        "primitive": "signature",
+        "pqc_status": "POST-QUANTUM READY",
+        "param": "SHA256/W4",
+        "std": "NIST SP 800-208 / RFC 8554 / RFC 8391",
+    },
     # =========================================================================
     # 1. POST-QUANTUM CRYPTOGRAPHY (NIST FIPS 203, 204, 205 & Hybrid TLS/KEM)
     # =========================================================================
@@ -150,6 +226,88 @@ CRYPTO_PATTERNS: List[Dict[str, Any]] = [
         "std": "ISO/NIST Post-Quantum KEM",
     },
 
+    # --- Swift Asymmetric & Elliptic Curve (Apple CryptoKit / Security.framework) ---
+    {
+        "pattern": r"\bCurve25519\.Signing(?:\.PrivateKey|\.PublicKey)?\b",
+        "name": "Ed25519-SwiftCryptoKit",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "256",
+        "std": "RFC 8032 / Apple CryptoKit",
+    },
+    {
+        "pattern": r"\bCurve25519\.KeyAgreement(?:\.PrivateKey|\.PublicKey)?\b",
+        "name": "X25519-SwiftCryptoKit",
+        "primitive": "key-exchange",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "256",
+        "std": "RFC 7748 / Apple CryptoKit",
+    },
+    {
+        "pattern": r"\bP(?:256|384|521)\.(?:Signing|KeyAgreement)(?:\.PrivateKey|\.PublicKey)?\b",
+        "name": "ECDSA-ECDH-SwiftCryptoKit",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "NIST-P-Curve",
+        "std": "FIPS 186-5 / Apple CryptoKit",
+    },
+    {
+        "pattern": r"\b(?:SecKeyCreateRandomKey|SecKeyGeneratePair|SecKeyCreateSignature|SecKeyVerifySignature|SecKeyEncrypt|SecKeyDecrypt)\b",
+        "name": "SecKey-Asymmetric-Operations",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "RSA/EC",
+        "std": "Apple Security.framework",
+    },
+    {
+        "pattern": r"\bkSecAttrKeyType(?:RSA|EC|ECSECPrimeRandom)\b",
+        "name": "SecKey-Asymmetric-KeyType",
+        "primitive": "asymmetric-cipher",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "RSA/EC",
+        "std": "Apple Security.framework",
+    },
+    {
+        "pattern": r"\bsecp256k1\.Signing\.PrivateKey\b",
+        "name": "secp256k1-Swift",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "secp256k1",
+        "std": "SECG / Bitcoin / Ethereum",
+    },
+    # --- Solidity, Haskell, Zig, Perl Asymmetric Primitives ---
+    {
+        "pattern": r"\becrecover\s*\(",
+        "name": "ECDSA-secp256k1-EVM-Recovery",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "secp256k1",
+        "std": "Ethereum / EVM",
+    },
+    {
+        "pattern": r"\bCrypto\.PubKey\.(?:RSA|ECC|Ed25519|Ed448)\b",
+        "name": "Haskell-Cryptonite-Asymmetric",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "RSA/ECC",
+        "std": "Haskell Cryptonite",
+    },
+    {
+        "pattern": r"\bstd\.crypto\.sign\.(?:Ed25519|ecdsa)\b",
+        "name": "Zig-Crypto-Signatures",
+        "primitive": "signature",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "Ed25519/ECDSA",
+        "std": "Zig Standard Library",
+    },
+    {
+        "pattern": r"\bCrypt::(?:OpenSSL::RSA|PK::RSA|PK::ECC)\b",
+        "name": "Perl-Crypt-Asymmetric",
+        "primitive": "asymmetric-cipher",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "RSA/ECC",
+        "std": "Perl Crypt",
+    },
     # =========================================================================
     # 2. CLASSICAL ASYMMETRIC PRIMITIVES (Quantum-Vulnerable to Shor's Algorithm)
     # =========================================================================
@@ -242,6 +400,72 @@ CRYPTO_PATTERNS: List[Dict[str, Any]] = [
         "oid": "1.2.840.113549.1.3.1",
     },
 
+    # --- Swift Symmetric AEAD & CommonCrypto Ciphers ---
+    {
+        "pattern": r"\b(?:AES\.GCM|ChaChaPoly)(?:\.seal|\.open)?\b",
+        "name": "SwiftCryptoKit-AEAD",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "Apple CryptoKit / NIST FIPS 197 / RFC 8439",
+    },
+    {
+        "pattern": r"\bCryptoSwift\.(?:AES|ChaCha20|Blowfish|Rabbit)\b",
+        "name": "CryptoSwift-Ciphers",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "CryptoSwift",
+    },
+    {
+        "pattern": r"\b(?:CCCrypt|CCCryptorCreate|CCCryptorUpdate|CCCryptorFinal)\b",
+        "name": "CommonCrypto-Cipher",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "128/256",
+        "std": "Apple CommonCrypto",
+    },
+    # --- Solidity Keccak-256 & Multi-Language Symmetric Ciphers ---
+    {
+        "pattern": r"\bkeccak256\s*\(",
+        "name": "Keccak-256-Ethereum",
+        "primitive": "hash",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "NIST Keccak / Ethereum EVM",
+    },
+    {
+        "pattern": r"\bCrypto\.Cipher\.(?:AES|ChaChaPoly1305)\b",
+        "name": "Haskell-Cryptonite-Cipher",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "Haskell Cryptonite",
+    },
+    {
+        "pattern": r"\bstd\.crypto\.aead\.(?:aes_gcm|chacha_poly)\b",
+        "name": "Zig-Crypto-AEAD",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "Zig Standard Library",
+    },
+    {
+        "pattern": r"\bCrypt::(?:OpenSSL::AES|Cipher::AES)\b",
+        "name": "Perl-Crypt-Cipher",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "Perl Crypt",
+    },
+    {
+        "pattern": r"\b(?:openssl::aes_gcm_encrypt|sodium::data_encrypt)\b",
+        "name": "R-Crypto-Cipher",
+        "primitive": "block-cipher",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "R OpenSSL/Sodium",
+    },
     # =========================================================================
     # 3. CLASSICAL SYMMETRIC CIPHERS & AEAD (Grover's Algorithm Evaluated)
     # =========================================================================
@@ -320,6 +544,74 @@ CRYPTO_PATTERNS: List[Dict[str, Any]] = [
         "oid": "1.2.840.113549.1.9.16.3.18",
     },
 
+    # --- Swift KDF & Hashes ---
+    {
+        "pattern": r"\bCCKeyDerivationPBKDF\b",
+        "name": "PBKDF2-CommonCrypto",
+        "primitive": "kdf",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "NIST SP 800-132 / Apple CommonCrypto",
+    },
+    {
+        "pattern": r"\bCryptoSwift\.(?:Argon2|PBKDF2|HKDF)\b",
+        "name": "CryptoSwift-KDF",
+        "primitive": "kdf",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256",
+        "std": "CryptoSwift KDF",
+    },
+    {
+        "pattern": r"\bCryptoKit\.(?:SHA256|SHA384|SHA512|HMAC)\b",
+        "name": "SwiftCryptoKit-Hashes",
+        "primitive": "hash",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256/384/512",
+        "std": "FIPS 180-4 / Apple CryptoKit",
+    },
+    {
+        "pattern": r"\bCC_SHA(?:256|384|512|224)\b",
+        "name": "CommonCrypto-SHA2",
+        "primitive": "hash",
+        "pqc_status": "CLASSICAL/SYMMETRIC",
+        "param": "256/384/512",
+        "std": "FIPS 180-4 / Apple CommonCrypto",
+    },
+    {
+        "pattern": r"\bCryptoKit\.Insecure\.(?:MD5|SHA1)\b",
+        "name": "SwiftCryptoKit-Insecure-Hash",
+        "primitive": "hash",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "128/160",
+        "std": "Deprecated / Apple CryptoKit Insecure",
+    },
+    {
+        "pattern": r"\bCC_(?:MD5|SHA1)\b",
+        "name": "CommonCrypto-Insecure-Hash",
+        "primitive": "hash",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "128/160",
+        "std": "Deprecated / Apple CommonCrypto",
+    },
+    # --- Apple Security.framework Certificates & Key Material ---
+    {
+        "pattern": r"\b(?:SecCertificateCreateWithData|SecTrustEvaluateWithError|SecCertificateRef|SecIdentityRef|Certificate\.init)\b",
+        "name": "Apple-X509-Certificate",
+        "primitive": "certificate",
+        "asset_type": "certificate",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "X.509",
+        "std": "Apple Security.framework / Swift Certificates",
+    },
+    {
+        "pattern": r"\bkSecClass(?:Certificate|Key|Identity)\b",
+        "name": "Apple-Keychain-Key-Material",
+        "primitive": "key",
+        "asset_type": "related-crypto-material",
+        "pqc_status": "QUANTUM-VULNERABLE",
+        "param": "Keychain/KMS",
+        "std": "Apple Keychain Services",
+    },
     # =========================================================================
     # 4. KEY DERIVATION FUNCTIONS (KDF) & PASSWORD HASHING
     # =========================================================================
@@ -539,8 +831,10 @@ CRYPTO_PATTERNS: List[Dict[str, Any]] = [
     },
 ]
 
-# File extensions to scan across 18+ programming languages, scripts, IaC, and PKI
+# File extensions to scan across 25+ programming languages, scripts, IaC, and PKI
 SOURCE_EXTENSIONS = {
+    # Swift & Apple Ecosystem
+    ".swift", ".m", ".mm",
     # Python
     ".py",
     # JavaScript / TypeScript
@@ -559,23 +853,41 @@ SOURCE_EXTENSIONS = {
     ".rb",
     # PHP
     ".php",
-    # Swift
-    ".swift",
     # Dart / Flutter
     ".dart",
     # Elixir / Erlang
-    ".ex", ".exs", ".erl",
+    ".ex", ".exs", ".erl", ".hrl",
+    # Haskell
+    ".hs", ".lhs",
+    # Zig
+    ".zig",
+    # Clojure / Groovy
+    ".clj", ".cljs", ".cljc", ".groovy",
+    # Perl
+    ".pl", ".pm",
+    # Lua
+    ".lua",
+    # R
+    ".r", ".R",
+    # Solidity / Vyper
+    ".sol", ".vy",
+    # Julia
+    ".jl",
     # Shell / PowerShell
     ".sh", ".bash", ".ps1",
     # SQL
     ".sql",
     # IaC & TLS / Proxy Configs & Certificates
     ".tf", ".hcl", ".conf", ".nginx", ".pem", ".crt", ".cer",
+    ".json", ".yaml", ".yml", ".toml", ".env", ".properties",
 }
 
 SPECIAL_FILENAMES = {"Dockerfile", "Containerfile", "nginx.conf"}
 
 EXTENSION_TO_LANGUAGE = {
+    ".swift": "Swift",
+    ".m": "Objective-C",
+    ".mm": "Objective-C++",
     ".py": "Python",
     ".js": "JavaScript",
     ".jsx": "JavaScript",
@@ -598,11 +910,26 @@ EXTENSION_TO_LANGUAGE = {
     ".rs": "Rust",
     ".rb": "Ruby",
     ".php": "PHP",
-    ".swift": "Swift",
     ".dart": "Dart",
     ".ex": "Elixir",
     ".exs": "Elixir",
     ".erl": "Erlang",
+    ".hrl": "Erlang",
+    ".hs": "Haskell",
+    ".lhs": "Haskell",
+    ".zig": "Zig",
+    ".clj": "Clojure",
+    ".cljs": "Clojure",
+    ".cljc": "Clojure",
+    ".groovy": "Groovy",
+    ".pl": "Perl",
+    ".pm": "Perl",
+    ".lua": "Lua",
+    ".r": "R",
+    ".R": "R",
+    ".sol": "Solidity",
+    ".vy": "Vyper",
+    ".jl": "Julia",
     ".sh": "Shell",
     ".bash": "Shell",
     ".ps1": "PowerShell",
@@ -614,6 +941,12 @@ EXTENSION_TO_LANGUAGE = {
     ".pem": "PKI/Certificate",
     ".crt": "PKI/Certificate",
     ".cer": "PKI/Certificate",
+    ".json": "Configuration",
+    ".yaml": "Configuration",
+    ".yml": "Configuration",
+    ".toml": "Configuration",
+    ".env": "Configuration",
+    ".properties": "Configuration",
 }
 
 IGNORED_DIRS = {

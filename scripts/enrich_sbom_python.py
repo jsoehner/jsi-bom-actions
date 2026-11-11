@@ -593,7 +593,7 @@ def discover_Other_ecosystem_dependencies(project_dir: Path) -> List[Dict[str, s
             except Exception:
                 pass
 
-        # 5. Swift (Package.resolved)
+        # 5. Swift (Package.resolved, Package.swift)
         elif fname == "Package.resolved":
             try:
                 sdata = json.loads(fpath.read_text(encoding="utf-8", errors="ignore"))
@@ -606,6 +606,29 @@ def discover_Other_ecosystem_dependencies(project_dir: Path) -> List[Dict[str, s
                         if ident:
                             purl = f"pkg:swift/{ident}@{ver}"
                             discovered[purl] = make_component(ident, ver, purl)
+            except Exception:
+                pass
+        elif fname == "Package.swift":
+            try:
+                content = fpath.read_text(encoding="utf-8", errors="ignore")
+                for m in re.finditer(r'\.package\s*\(\s*(?:url:\s*)?"([^"]+)"\s*,\s*(?:(?:from|exact):\s*"([^"]+)"|\.upToNextMajor\(from:\s*"([^"]+)"\)|\.exact\("([^"]+)"\)|from:\s*"([^"]+)")', content):
+                    pkg_url = m.group(1)
+                    ver = m.group(2) or m.group(3) or m.group(4) or m.group(5) or "latest"
+                    pkg_name = pkg_url.rstrip("/").split("/")[-1]
+                    if pkg_name.endswith(".git"):
+                        pkg_name = pkg_name[:-4]
+                    if pkg_name:
+                        purl = f"pkg:swift/{pkg_name.lower()}@{ver}"
+                        if purl not in discovered:
+                            discovered[purl] = make_component(pkg_name, ver, purl)
+                for m in re.finditer(r'\.package\s*\(\s*url:\s*"([^"]+)"', content):
+                    pkg_url = m.group(1)
+                    pkg_name = pkg_url.rstrip("/").split("/")[-1]
+                    if pkg_name.endswith(".git"):
+                        pkg_name = pkg_name[:-4]
+                    if pkg_name and not any(p.startswith(f"pkg:swift/{pkg_name.lower()}@") for p in discovered):
+                        purl = f"pkg:swift/{pkg_name.lower()}@latest"
+                        discovered[purl] = make_component(pkg_name, "latest", purl)
             except Exception:
                 pass
 
