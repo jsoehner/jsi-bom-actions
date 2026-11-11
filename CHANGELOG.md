@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Repository Rename**: Renamed repository to `jsi-bom-actions` to reflect the expanded scope as a suite of Bill of Materials actions and workflows across the JSI portfolio.
-- **Node 24 Modernization**: Upgraded `actions/upload-artifact` to `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (`v7.0.2`), eliminating Node 20 runner deprecation warnings.
+- Upgraded `actions/upload-artifact` to `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (`v7.0.2`).
 - Standardized `VERSION` to `1.0.2`.
 - Updated documentation with troubleshooting advice and branch protection configuration guidance.
 
