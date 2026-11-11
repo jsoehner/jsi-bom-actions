@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Graceful Permission Degradation**: Added non-blocking warning annotations if repository permissions or branch protection rules prohibit automatic bot pushes, ensuring that BOM artifacts and summary outputs are always preserved without failing the CI pipeline.
 
 ### Changed
+- **Node 24 Modernization**: Upgraded `actions/upload-artifact` to `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (`v7.0.2`), eliminating Node 20 runner deprecation warnings.
 - Standardized `VERSION` to `1.0.2`.
 - Updated documentation with troubleshooting advice and branch protection configuration guidance.
 
