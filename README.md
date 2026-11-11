@@ -120,6 +120,32 @@ Every run executes four automated steps:
 
 ---
 
+## Permissions & Concurrency Resilience
+
+### Required Permissions
+
+To allow the workflow to commit the generated cryptographic audit report and comment on pull requests, configure the following job-level permissions:
+
+```yaml
+permissions:
+  contents: write      # Required to commit docs/security/CRYPTOGRAPHIC_AUDIT.md
+  pull-requests: write # Required to comment PQC migration scorecards on PRs
+  id-token: write      # Required for OIDC signing (if applicable)
+```
+
+If your repository enforces strict branch protection (e.g. required approvals or signed commits) or uses read-only tokens:
+- Set `publish-audit-report: 'false'` and/or `comment-pr: 'false'`.
+- All generated SBOM, CBOM, and markdown audit reports will still be generated and preserved as downloadable workflow artifacts (`oss/`).
+
+### Concurrency & Rebase Resilience
+
+When automated jobs (such as Dependabot merges or parallel CI runs) commit to the default branch at the same time as this action, the action automatically:
+1. Catches non-fast-forward push rejections.
+2. Fetches the latest remote branch state and performs an in-memory `git rebase`.
+3. Retries pushing the single audit documentation commit up to 3 times before gracefully emitting a warning without failing the build.
+
+---
+
 ## Alternative: Call as a Reusable Workflow
 
 If your organization standardizes on `workflow_call`, invoke the reusable workflow directly:

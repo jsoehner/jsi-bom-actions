@@ -157,7 +157,31 @@ runs:
             echo "No changes in cryptographic audit report."
           else
             git commit -m "docs(security): update cryptographic audit & PQC migration report [skip ci]"
-            git push
+            TARGET_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD)}"
+            if [ "$TARGET_BRANCH" = "HEAD" ]; then
+              TARGET_BRANCH="${GITHUB_REF#refs/heads/}"
+            fi
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+            PUSHED=false
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if git push origin "HEAD:$TARGET_BRANCH"; then
+                PUSHED=true
+                echo "Successfully published cryptographic audit report to $TARGET_BRANCH."
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                echo "::warning::Push conflict on $TARGET_BRANCH. Rebase retry $RETRY_COUNT of $MAX_RETRIES..."
+                git fetch origin "$TARGET_BRANCH"
+                git rebase "origin/$TARGET_BRANCH" || {
+                  git rebase --abort
+                  break
+                }
+              fi
+            done
+            if [ "$PUSHED" != "true" ]; then
+              echo "::warning::Could not automatically push audit report to $TARGET_BRANCH due to branch protection or concurrent race. The generated report is preserved in artifacts."
+            fi
           fi
         fi
 
