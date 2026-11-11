@@ -168,12 +168,8 @@ runs:
         if [ -f "${{ inputs.output-dir }}/crypto-summary.md" ] && [ -n "${{ github.event.pull_request.number }}" ]; then
           SUMMARY=$(sed -n '/## 📊 Post-Quantum Migration Scorecard/,/## 🔒 Classical Symmetric & Digest Assets/p' "${{ inputs.output-dir }}/crypto-summary.md")
           echo "Posting summary to PR #${{ github.event.pull_request.number }}..."
-          gh pr comment "${{ github.event.pull_request.number }}" --body "### 🛡️ Cryptographic Audit Summary
-
-$SUMMARY
-
----
-Full audit report can be found in the repository at ${{ inputs.audit-report-path }}" || true
+          COMMENT_BODY=$(printf "### 🛡️ Cryptographic Audit Summary\n\n%s\n\n---\nFull audit report can be found in the repository at ${{ inputs.audit-report-path }}\n" "$SUMMARY")
+          gh pr comment "${{ github.event.pull_request.number }}" --body "$COMMENT_BODY" || true
         fi
       env:
         GH_TOKEN: ${{ github.token }}
