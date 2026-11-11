@@ -1,37 +1,6 @@
 name: Software & Cryptographic Bill of Materials (SBOM & CBOM)
 
 on:
-  workflow_call:
-    inputs:
-      target_dir:
-        description: 'Target directory to scan'
-        required: false
-        type: string
-        default: '.'
-      output_dir:
-        description: 'Directory to store generated BOM artifacts'
-        required: false
-        type: string
-        default: 'oss'
-      docs_path:
-        description: 'Path where CRYPTOGRAPHIC_AUDIT.md will be published'
-        required: false
-        type: string
-        default: 'docs/security'
-      publish_audit:
-        description: 'Whether to commit and push the audit report on push'
-        required: false
-        type: boolean
-        default: true
-      comment_pr:
-        description: 'Whether to post PQC scorecard comment on PRs'
-        required: false
-        type: boolean
-        default: true
-    secrets:
-      GITHUB_TOKEN:
-        required: false
-
   push:
     branches:
       - main
@@ -60,13 +29,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Multi-Language SBOM, CBOM & PQC Governance Action
-        uses: jsoehner/jsi-bom-actions@main
+      - name: Run Multi-Language SBOM, CBOM & PQC Governance
+        uses: jsoehner/jsi-bom-actions@f392195bb791bc9e7d39023d320f7d07175c2ac4 # v1.1.0
         with:
-          target-dir: ${{ inputs.target_dir || '.' }}
-          output-dir: ${{ inputs.output_dir || 'oss' }}
-          audit-report-path: ${{ (inputs.docs_path || 'docs/security') }}/CRYPTOGRAPHIC_AUDIT.md
-          publish-audit-report: ${{ inputs.publish_audit != false }}
-          comment-pr: ${{ inputs.comment_pr != false }}
+          target-dir: '.'
+          output-dir: 'oss'
+          publish-audit-report: 'true'
+          comment-pr: 'true'
           upload-artifacts: 'true'
           retention-days: '90'
