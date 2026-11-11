@@ -1,4 +1,4 @@
-name: 'Multi-Language SBOM, CBOM & PQC Cryptographic Governance'
+name: 'JSI BOM Actions: Multi-Language SBOM, CBOM & PQC Cryptographic Governance'
 description: 'Generates CycloneDX/SPDX SBOMs and CBOMs across 18+ languages, reconciles AST crypto assets, posts PR scorecards, and publishes PQC readiness reports.'
 author: 'jsoehner'
 branding:

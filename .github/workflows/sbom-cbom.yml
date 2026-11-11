@@ -61,7 +61,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Multi-Language SBOM, CBOM & PQC Governance Action
-        uses: jsoehner/sbom-cbom-workflow@main
+        uses: jsoehner/jsi-bom-actions@main
         with:
           target-dir: ${{ inputs.target_dir || '.' }}
           output-dir: ${{ inputs.output_dir || 'oss' }}

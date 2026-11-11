@@ -1,6 +1,6 @@
-# SBOM, CBOM & PQC Cryptographic Governance Action
+# JSI BOM Actions: Multi-Language SBOM, CBOM & PQC Cryptographic Governance
 
-[![Release](https://img.shields.io/github/v/release/jsoehner/sbom-cbom-workflow?color=blue&logo=github)](https://github.com/jsoehner/sbom-cbom-workflow/releases)
+[![Release](https://img.shields.io/github/v/release/jsoehner/jsi-bom-actions?color=blue&logo=github)](https://github.com/jsoehner/jsi-bom-actions/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Composite-orange?logo=githubactions)](action.yml)
 [![CycloneDX](https://img.shields.io/badge/CycloneDX-1.6%20JSON-blue)](https://cyclonedx.org)
@@ -42,7 +42,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Multi-Language SBOM, CBOM & PQC Governance
-        uses: jsoehner/sbom-cbom-workflow@543ef25823ed2debc418af91c3fbd2b68b602c8f # v1.0.2
+        uses: jsoehner/jsi-bom-actions@543ef25823ed2debc418af91c3fbd2b68b602c8f # v1.0.2
         with:
           target-dir: '.'
           output-dir: 'oss'
@@ -69,7 +69,7 @@ updates:
       interval: "weekly"
 ```
 
-Dependabot detects releases on `jsoehner/sbom-cbom-workflow` and updates the 40-character commit SHA while preserving the semantic version comment.
+Dependabot detects releases on `jsoehner/jsi-bom-actions` and updates the 40-character commit SHA while preserving the semantic version comment.
 
 ---
 
@@ -161,7 +161,7 @@ on:
 
 jobs:
   audit:
-    uses: jsoehner/sbom-cbom-workflow/.github/workflows/sbom-cbom.yml@v1
+    uses: jsoehner/jsi-bom-actions/.github/workflows/sbom-cbom.yml@v1
     permissions:
       contents: write
       id-token: write
