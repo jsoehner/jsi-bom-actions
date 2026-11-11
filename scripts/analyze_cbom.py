@@ -2,10 +2,10 @@
 """
 analyze_cbom.py - Analyze CycloneDX Cryptographic Bill of Materials (CBOM) & Supply Chain Attestations
 
-Inventories cryptographic assets (algorithms, certificates, keys, protocols),
-assimilates known upstream CBOM profiles for third-party binaries/dependencies,
-computes audit confidence based on supply chain coverage, and assesses
-Post-Quantum Cryptography (PQC) migration readiness.
+Inventories all cryptographic assets (algorithms, certificates, keys/related-crypto-material,
+protocols), assimilates known upstream CBOM profiles for third-party dependencies across
+12+ language ecosystems, computes audit confidence based on supply chain coverage, and
+assesses Post-Quantum Cryptography (PQC) migration readiness.
 """
 
 import sys
@@ -31,17 +31,23 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
 QUANTUM_VULNERABLE_PATTERNS = [
     r"\bRSA\b", r"\bECDSA\b", r"\bECDH\b", r"\bDIFFIE[-_ ]?HELLMAN\b",
     r"\bED25519\b", r"\bED448\b", r"\bX25519\b", r"\bX448\b",
-    r"\bSECP\d+R1\b", r"(?<![A-Z0-9_-])(?:DSA|DH)(?![A-Z0-9_-])",
-    r"\bMD5\b", r"\bSHA[-_]?1\b"
+    r"\bSECP\d+[RK]1\b", r"(?<![A-Z0-9_-])(?:DSA|DH)(?![A-Z0-9_-])",
+    r"\bMD5\b", r"\bSHA[-_]?1\b", r"\b3DES\b", r"\bTRIPLEDES\b",
+    r"\bRC4\b", r"\bARC4\b", r"\bAES[-_]?ECB\b", r"\bTLS[-_]?1\.[01]\b"
 ]
 
 POST_QUANTUM_PATTERNS = [
-    r"\bML[-_]KEM\b", r"\bKYBER\b", r"\bML[-_]DSA\b", r"\bDILITHIUM\b",
-    r"\bSLH[-_]DSA\b", r"\bSPHINCS\+?\b", r"\bFALCON\b", r"\bLMS\b", r"\bXMSS\b"
+    r"\bML[-_]?KEM\b", r"\bKYBER\b", r"\bML[-_]?DSA\b", r"\bDILITHIUM\b",
+    r"\bSLH[-_]?DSA\b", r"\bSPHINCS\+?\b", r"\bFALCON\b", r"\bFN[-_]?DSA\b",
+    r"\bLMS\b", r"\bXMSS\b", r"\bX25519MLKEM768\b", r"\bSECP256R1MLKEM768\b",
+    r"\bFRODOKEM\b", r"\bCLASSIC[-_]?MCELIECE\b", r"\bBIKE\b", r"\bHQC\b",
+    r"\bPQC[-_]?KEM\b"
 ]
 
 SYMMETRIC_CLASSICAL = {
-    "AES", "CHACHA20", "3DES", "DES", "BLOWFISH", "RC4", "SHA-256", "SHA-384", "SHA-512", "SHA-3"
+    "AES", "CHACHA20", "XCHACHA20", "SHA-256", "SHA-384", "SHA-512", "SHA-3",
+    "SHA3-256", "SHA3-512", "BLAKE2B", "BLAKE3", "ARGON2ID", "PBKDF2", "SCRYPT",
+    "BCRYPT", "HKDF", "HMAC-SHA256", "HMAC-SHA384", "HMAC-SHA512", "CSPRNG-DRBG"
 }
 
 
@@ -68,7 +74,6 @@ def load_catalog(catalog_path: Optional[Path], external_cboms: Optional[List[Pat
                         ext_data = json.load(f)
                         ext_comps = ext_data.get("components", [])
                         for ec in ext_comps:
-                            # If it's a full CycloneDX component with cryptoProperties, wrap it into catalog profile
                             c_name = ec.get("name") or "External Dependency"
                             c_purl = ec.get("purl") or ""
                             crypto_props = ec.get("cryptoProperties", {})
@@ -267,6 +272,7 @@ def analyze_cbom(
     crypto_assets = []
     algorithm_counter = Counter()
     asset_types_counter = Counter()
+    language_counter = Counter()
     vulnerable_assets = []
     pqc_assets = []
 
@@ -290,6 +296,10 @@ def analyze_cbom(
         evidence = comp.get("evidence", {})
         occurrences = evidence.get("occurrences", [])
         asset_info["occurrences"] = occurrences
+        for occ in occurrences:
+            lang = occ.get("language")
+            if lang and lang != "Unknown":
+                language_counter[lang] += 1
 
         algo_details = crypto_props.get("algorithmProperties", {})
         algo_name = str(algo_details.get("name") or comp.get("name") or "")
@@ -298,14 +308,24 @@ def analyze_cbom(
 
         asset_info["algorithm"] = algo_name
         asset_info["primitive"] = str(algo_details.get("primitive") or "unknown")
-        asset_info["key_length"] = str(algo_details.get("parameterSetIdentifier") or algo_details.get("keyLength") or "N/A")
+        asset_info["key_length"] = str(
+            algo_details.get("parameterSetIdentifier")
+            or algo_details.get("keyLength")
+            or algo_details.get("curve")
+            or "N/A"
+        )
 
         cert_details = crypto_props.get("certificateProperties", {})
         proto_details = crypto_props.get("protocolProperties", {})
+        mat_details = crypto_props.get("relatedCryptoMaterialProperties", {})
 
         if cert_details:
             asset_info["certificate_subject"] = cert_details.get("subjectName")
             asset_info["certificate_expiry"] = cert_details.get("validTo")
+            if asset_info["primitive"] == "unknown":
+                asset_info["primitive"] = "certificate"
+            if asset_info["key_length"] == "N/A":
+                asset_info["key_length"] = cert_details.get("certificateFormat") or "X.509"
 
         if proto_details:
             asset_info["protocol_type"] = proto_details.get("type")
@@ -315,8 +335,18 @@ def analyze_cbom(
             if asset_info["key_length"] == "N/A" and proto_details.get("version"):
                 asset_info["key_length"] = f"v{proto_details.get('version')}"
 
+        if mat_details:
+            if asset_info["primitive"] == "unknown":
+                asset_info["primitive"] = mat_details.get("type") or "key-material"
+            if asset_info["key_length"] == "N/A":
+                asset_info["key_length"] = str(mat_details.get("format") or mat_details.get("size") or "Key")
+
+        # Check PQC first so hybrid names like X25519MLKEM768 classify as POST-QUANTUM READY
         is_pqc = any(re.search(pat, algo_upper) for pat in POST_QUANTUM_PATTERNS)
-        is_qv = any(re.search(pat, algo_upper) for pat in QUANTUM_VULNERABLE_PATTERNS)
+        is_qv = (not is_pqc) and (
+            any(re.search(pat, algo_upper) for pat in QUANTUM_VULNERABLE_PATTERNS)
+            or asset_type in ("certificate", "related-crypto-material") and not is_pqc and asset_type == "related-crypto-material"
+        )
 
         if is_pqc:
             asset_info["pqc_status"] = "POST-QUANTUM READY"
@@ -364,7 +394,7 @@ def analyze_cbom(
     if asym_total > 0:
         migration_pct = round((len(pqc_assets) / asym_total * 100), 1)
         migration_pct_display = f"{migration_pct}%"
-        migration_note = f"({len(pqc_assets)} of {asym_total} asymmetric primitives migrated)"
+        migration_note = f"({len(pqc_assets)} of {asym_total} asymmetric/vulnerable primitives migrated)"
     else:
         migration_pct = None
         migration_pct_display = "N/A (0 detected)"
@@ -383,6 +413,7 @@ def analyze_cbom(
         "pqc_migration_display": migration_pct_display,
         "pqc_migration_note": migration_note,
         "asset_types": dict(asset_types_counter),
+        "language_distribution": dict(language_counter),
         "algorithm_distribution": dict(algorithm_counter),
         "vulnerable_assets": vulnerable_assets,
         "pqc_assets": pqc_assets,
@@ -423,7 +454,9 @@ def generate_markdown_summary(summary: dict) -> str:
     md.append("| Evaluation Layer | Coverage / Status | Audit Confidence Assessment |")
     md.append("|---|---|---|")
     fp_count = summary["total_components"]
-    fp_label = f"{fp_count} Crypto Primitive(s) Inventoried" if fp_count > 0 else "0 Custom Primitives"
+    langs = summary.get("language_distribution", {})
+    lang_str = f" across {', '.join(f'{k} ({v})' for k, v in sorted(langs.items()))}" if langs else ""
+    fp_label = f"{fp_count} Crypto Primitive(s) Inventoried{lang_str}" if fp_count > 0 else "0 Custom Primitives"
     md.append(f"| **First-Party Code (`src/`, `scripts/`)** | **100% Audited** ({fp_label}) | 🟢 **HIGH** (Direct AST & SAST verified) |")
     if conf["total_dependencies"] > 0:
         md.append(f"| **Third-Party Supply Chain** | **{conf['coverage_percentage']}%** ({conf['verified_dependencies_count']} of {conf['total_dependencies']} dependencies cataloged) | {conf['confidence_badge']} (Known profiles assimilated) |")
@@ -443,10 +476,13 @@ def generate_markdown_summary(summary: dict) -> str:
         md.append("| Component Name | Primitive | Key/Parameter Set | PQC Standard | Provenance / Location(s) |")
         md.append("|---|---|---|---|---|")
         for asset in summary["pqc_assets"]:
-            std = "ML-KEM-768 (FIPS 203)" if "KEM" in asset["algorithm"].upper() or "KYBER" in asset["algorithm"].upper() else \
-                  "ML-DSA-65 (FIPS 204)" if "DSA" in asset["algorithm"].upper() or "DILITHIUM" in asset["algorithm"].upper() else \
-                  "SLH-DSA (FIPS 205)" if "SLH" in asset["algorithm"].upper() or "SPHINCS" in asset["algorithm"].upper() else \
-                  "LMS/XMSS (RFC 8391/8554)" if "LMS" in asset["algorithm"].upper() or "XMSS" in asset["algorithm"].upper() else \
+            algo_u = asset["algorithm"].upper()
+            std = "Hybrid X25519+ML-KEM-768 (FIPS 203)" if "X25519MLKEM" in algo_u or "SECP256R1MLKEM" in algo_u else \
+                  "ML-KEM (FIPS 203)" if "KEM" in algo_u or "KYBER" in algo_u else \
+                  "ML-DSA (FIPS 204)" if "DSA" in algo_u or "DILITHIUM" in algo_u else \
+                  "SLH-DSA (FIPS 205)" if "SLH" in algo_u or "SPHINCS" in algo_u else \
+                  "FN-DSA / FALCON (FIPS 206)" if "FALCON" in algo_u or "FN-DSA" in algo_u else \
+                  "LMS/XMSS (RFC 8391/8554)" if "LMS" in algo_u or "XMSS" in algo_u else \
                   "PQC Algorithm"
             locs_str = format_locations(asset.get("occurrences", []))
             prov = asset.get("source", "First-Party Code")
@@ -464,8 +500,11 @@ def generate_markdown_summary(summary: dict) -> str:
             algo_u = asset["algorithm"].upper()
             recom = asset.get("remediation") or (
                 "SHA-256 / SHA-3-256 (FIPS 180-4 / FIPS 202)" if any(k in algo_u for k in ["MD5", "SHA-1", "SHA1"]) else \
+                "AES-256-GCM / ChaCha20-Poly1305 (RFC 5116 / RFC 8439)" if any(k in algo_u for k in ["3DES", "TRIPLEDES", "RC4", "ARC4", "ECB"]) else \
+                "TLS 1.3 with X25519MLKEM768 (RFC 8446 / FIPS 203)" if "TLS-1.0" in algo_u or "TLS-1.1" in algo_u else \
+                "ML-DSA-65 / SLH-DSA X.509 Certificate & KMS Key Rotation" if asset["asset_type"] in ("certificate", "related-crypto-material") else \
                 "ML-KEM-768 / Kyber (FIPS 203)" if any(k in algo_u for k in ["RSA", "DH", "ECDH", "X25519"]) and "SIGN" not in asset["primitive"] else \
-                "ML-DSA-65 / Dilithium (FIPS 204)" if any(k in algo_u for k in ["ECDSA", "ED25519", "DSA"]) or "SIGN" in asset["primitive"] else \
+                "ML-DSA-65 / Dilithium (FIPS 204)" if any(k in algo_u for k in ["ECDSA", "ED25519", "DSA", "SECP"]) or "SIGN" in asset["primitive"] else \
                 "ML-KEM (KEM) or ML-DSA (Signatures)"
             )
 
@@ -496,7 +535,9 @@ def generate_markdown_summary(summary: dict) -> str:
         md.append("|---|---|---|---|---|")
         for asset in summary["symmetric_assets"]:
             algo_u = asset["algorithm"].upper()
-            sec_note = "Quantum-Resistant (Grover's proof)" if "256" in str(asset["key_length"]) or "384" in algo_u or "512" in algo_u else \
+            sec_note = "Quantum-Resistant KDF / Password Hashing (Grover-resistant)" if asset["primitive"] == "kdf" else \
+                       "Quantum-Resistant CSPRNG (NIST SP 800-90A)" if asset["primitive"] == "drbg" else \
+                       "Quantum-Resistant (Grover's proof)" if "256" in str(asset["key_length"]) or "384" in algo_u or "512" in algo_u else \
                        "Non-cryptographic integrity digest (OneDrive QuickXorHash 160-bit); pair with SHA-256" if "QUICKXOR" in algo_u else \
                        "TLS 1.3 Transport (Enable hybrid X25519MLKEM768 via OpenSSL 3.5+)" if "TLS" in algo_u or asset["primitive"] == "protocol" else \
                        "Legacy bit-length (Recommend 256-bit upgrade)" if "128" in str(asset["key_length"]) or "128" in algo_u else \
@@ -609,6 +650,7 @@ def main():
             print(f"Saved JSON report to: {args.json}")
     elif not args.markdown:
         print_report(summary)
+
 
 if __name__ == "__main__":
     main()

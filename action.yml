@@ -1,0 +1,187 @@
+name: 'Multi-Language SBOM, CBOM & PQC Cryptographic Governance'
+description: 'Generates CycloneDX/SPDX SBOMs and CBOMs across 18+ languages, reconciles AST crypto assets, posts PR scorecards, and publishes PQC readiness reports.'
+author: 'jsoehner'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  target-dir:
+    description: 'Target directory to scan'
+    required: false
+    default: '.'
+  output-dir:
+    description: 'Directory to store generated SBOM, CBOM, and audit reports'
+    required: false
+    default: 'oss'
+  python-version:
+    description: 'Python version for AST crypto scanning and SBOM enrichment'
+    required: false
+    default: '3.11'
+  publish-audit-report:
+    description: 'Commit and push docs/security/CRYPTOGRAPHIC_AUDIT.md on push events'
+    required: false
+    default: 'true'
+  audit-report-path:
+    description: 'Repository path for published Markdown cryptographic audit report'
+    required: false
+    default: 'docs/security/CRYPTOGRAPHIC_AUDIT.md'
+  comment-pr:
+    description: 'Post cryptographic audit summary comment on pull requests'
+    required: false
+    default: 'true'
+  upload-artifacts:
+    description: 'Upload generated BOM artifacts via actions/upload-artifact'
+    required: false
+    default: 'true'
+  artifact-name:
+    description: 'Name of the uploaded BOM artifact bundle'
+    required: false
+    default: 'bom-artifacts'
+  retention-days:
+    description: 'Retention period in days for uploaded artifacts'
+    required: false
+    default: '90'
+
+outputs:
+  sbom-cyclonedx:
+    description: 'Path to generated CycloneDX SBOM JSON'
+    value: ${{ inputs.output-dir }}/sbom.cyclonedx.json
+  sbom-spdx:
+    description: 'Path to generated SPDX SBOM JSON'
+    value: ${{ inputs.output-dir }}/sbom.spdx.json
+  cbom:
+    description: 'Path to generated and AST-reconciled CycloneDX CBOM JSON'
+    value: ${{ inputs.output-dir }}/cbom.json
+  crypto-analysis:
+    description: 'Path to structured JSON cryptographic analysis and PQC metrics'
+    value: ${{ inputs.output-dir }}/crypto-analysis.json
+  crypto-summary:
+    description: 'Path to Markdown cryptographic audit summary'
+    value: ${{ inputs.output-dir }}/crypto-summary.md
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create output directory
+      shell: bash
+      run: mkdir -p "${{ inputs.output-dir }}"
+
+    - name: Set up Python for Cryptographic Auditing & Multi-Ecosystem Enrichment
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Generate CycloneDX SBOM (Anchore / Syft)
+      uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+      with:
+        path: ${{ inputs.target-dir }}
+        format: cyclonedx-json
+        output-file: ${{ inputs.output-dir }}/sbom.cyclonedx.json
+        upload-artifact: false
+
+    - name: Generate SPDX SBOM (Anchore / Syft)
+      uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+      with:
+        path: ${{ inputs.target-dir }}
+        format: spdx-json
+        output-file: ${{ inputs.output-dir }}/sbom.spdx.json
+        upload-artifact: false
+
+    - name: Enrich SBOM Across All Language Ecosystems
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.target-dir }}/requirements.txt" ]; then
+          python3 -m pip install --quiet -r "${{ inputs.target-dir }}/requirements.txt" || true
+        fi
+        python3 "${{ github.action_path }}/scripts/enrich_sbom_python.py" \
+          "${{ inputs.output-dir }}/sbom.cyclonedx.json" \
+          "${{ inputs.target-dir }}"
+        if [ -f "${{ inputs.target-dir }}/build.gradle" ] || [ -f "${{ inputs.target-dir }}/build.gradle.kts" ]; then
+          python3 "${{ github.action_path }}/scripts/enrich_sbom_gradle.py" \
+            "${{ inputs.output-dir }}/sbom.cyclonedx.json" \
+            "${{ inputs.target-dir }}" || true
+        fi
+
+    - name: Generate Cryptographic Bill of Materials (CBOMkit)
+      uses: cbomkit/cbomkit-action@34a3d960625ae7f7f1b59455eff93a96df090eb7 # v2.3.0
+      continue-on-error: true
+      env:
+        CBOMKIT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        CBOMKIT_EXCLUDE: "(^|/)scripts/(scan_crypto_ast|analyze_cbom|fetch_oci_cbom|update_os_inventory|enrich_sbom).*|(^|/)tests/.*"
+
+    - name: Fix permissions for container-generated artifacts
+      shell: bash
+      run: sudo chown -R $(id -u):$(id -g) "${{ inputs.output-dir }}" || true
+
+    - name: Multi-Language Semantic AST Cryptographic Scan & CBOM Reconciliation
+      shell: bash
+      run: |
+        python3 "${{ github.action_path }}/scripts/scan_crypto_ast.py" \
+          "${{ inputs.target-dir }}" \
+          --cbom "${{ inputs.output-dir }}/cbom.json" \
+          --output-json "${{ inputs.output-dir }}/crypto-callsites.json"
+
+    - name: Run BOM Verification and Cryptographic Audit Harness
+      shell: bash
+      run: |
+        bash "${{ github.action_path }}/scripts/test_boms.sh" "${{ inputs.output-dir }}"
+
+    - name: Generate PQC Migration Dashboard & Step Summary
+      shell: bash
+      run: |
+        EXT_ARG=""
+        if [ -f "${{ inputs.output-dir }}/upstream_cbom.json" ]; then
+          EXT_ARG="--external-cbom ${{ inputs.output-dir }}/upstream_cbom.json"
+        fi
+        python3 "${{ github.action_path }}/scripts/analyze_cbom.py" \
+          "${{ inputs.output-dir }}/cbom.json" \
+          --sbom "${{ inputs.output-dir }}/sbom.cyclonedx.json" \
+          --catalog "${{ github.action_path }}/scripts/known_cbom_catalog.json" \
+          $EXT_ARG \
+          --json "${{ inputs.output-dir }}/crypto-analysis.json" \
+          --markdown "${{ inputs.output-dir }}/crypto-summary.md" \
+          --step-summary
+
+    - name: Publish Cryptographic Audit Report to Repository
+      if: inputs.publish-audit-report == 'true' && github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.output-dir }}/crypto-summary.md" ]; then
+          mkdir -p "$(dirname "${{ inputs.audit-report-path }}")"
+          cp "${{ inputs.output-dir }}/crypto-summary.md" "${{ inputs.audit-report-path }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.audit-report-path }}"
+          if git diff --staged --quiet; then
+            echo "No changes in cryptographic audit report."
+          else
+            git commit -m "docs(security): update cryptographic audit & PQC migration report [skip ci]"
+            git push
+          fi
+        fi
+
+    - name: Post PR Summary Comment
+      if: inputs.comment-pr == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.output-dir }}/crypto-summary.md" ] && [ -n "${{ github.event.pull_request.number }}" ]; then
+          SUMMARY=$(sed -n '/## 📊 Post-Quantum Migration Scorecard/,/## 🔒 Classical Symmetric & Digest Assets/p' "${{ inputs.output-dir }}/crypto-summary.md")
+          echo "Posting summary to PR #${{ github.event.pull_request.number }}..."
+          gh pr comment "${{ github.event.pull_request.number }}" --body "### 🛡️ Cryptographic Audit Summary
+
+$SUMMARY
+
+---
+Full audit report can be found in the repository at ${{ inputs.audit-report-path }}" || true
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Upload BOM Artifacts
+      if: inputs.upload-artifacts == 'true'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-dir }}/
+        retention-days: ${{ inputs.retention-days }}

@@ -1,7 +1,7 @@
 {
   "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
-  "catalogVersion": "1.0.0",
-  "description": "Known Cryptographic Bill of Materials (CBOM) Profiles and Attestations for Third-Party Binaries & Dependencies",
+  "catalogVersion": "2.0.0",
+  "description": "Multi-Ecosystem Cryptographic Bill of Materials (CBOM) Profiles and Attestations for Third-Party Binaries & Dependencies across Python, Node/TS, Go, Rust, Java/JVM, .NET/NuGet, Ruby, PHP, Swift, Dart, Elixir, and C/C++",
   "components": [
     {
       "name": "tomcat-embed-core",
@@ -16,7 +16,7 @@
           "algorithm": "TLS 1.2 / TLS 1.3",
           "pqc_status": "QUANTUM-VULNERABLE",
           "key_length": "RSA-2048 / ECDSA-P256",
-          "remediation": "Upgrade to Post-Quantum hybrid key exchange (X25519+ML-KEM-768) via OpenSSL 3.4+ or Java 25 JSSE provider"
+          "remediation": "Upgrade to Post-Quantum hybrid key exchange (X25519+ML-KEM-768) via OpenSSL 3.5+ or Java 25 JSSE provider"
         },
         {
           "name": "Tomcat TLS Symmetric Cipher Suites",
@@ -47,7 +47,7 @@
     },
     {
       "name": "spring-web",
-      "purlPattern": "^pkg:maven/org\\.springframework/spring-web(@.*)?$",
+      "purlPattern": "^pkg:maven/org\\.springframework/spring-(web|webflux)(@.*)?$",
       "category": "framework",
       "confidence": "HIGH",
       "source": "Spring Framework HTTP Client Security Specification",
@@ -58,53 +58,113 @@
           "algorithm": "HTTPS / TLS 1.3",
           "pqc_status": "QUANTUM-VULNERABLE",
           "key_length": "ECDH-X25519 / RSA-2048",
-          "remediation": "Ensure target AI endpoints (e.g. Ollama/OpenAI) and client support hybrid post-quantum key encapsulation (ML-KEM-768)"
+          "remediation": "Ensure target endpoints and JVM client support hybrid post-quantum key encapsulation (ML-KEM-768)"
         }
       ]
     },
     {
-      "name": "jackson-databind",
-      "purlPattern": "^pkg:maven/com\\.fasterxml\\.jackson\\.core/jackson-databind(@.*)?$",
-      "category": "serialization",
+      "name": "spring-security-crypto",
+      "purlPattern": "^pkg:maven/org\\.springframework\\.security/spring-security-(crypto|core|web|config|oauth2-.*)(@.*)?$",
+      "category": "security-framework",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert",
-      "cryptoAssets": []
+      "source": "Spring Security Cryptographic & OAuth2/OIDC Specification",
+      "cryptoAssets": [
+        {
+          "name": "Spring Security Password Hashing (BCrypt / Argon2id / PBKDF2)",
+          "primitive": "kdf",
+          "algorithm": "Argon2id / BCrypt / PBKDF2-HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "KDF and password hashing primitives are quantum-resistant against Grover's algorithm"
+        },
+        {
+          "name": "Spring Security OAuth2 / OIDC JWS Verification (RS256 / ES256)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048 / 256",
+          "remediation": "Plan migration to ML-DSA (FIPS 204) for OIDC/JWS token signing"
+        }
+      ]
     },
     {
-      "name": "jsoup",
-      "purlPattern": "^pkg:maven/org\\.jsoup/jsoup(@.*)?$",
-      "category": "parser",
+      "name": "bouncycastle-jce",
+      "purlPattern": "^pkg:maven/org\\.bouncycastle/(bcprov|bcpkix|bcutil|bctls)-(jdk18on|jdk15on|jdk15to18|fips)(@.*)?$",
+      "category": "crypto-library",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert",
-      "cryptoAssets": []
+      "source": "Legion of the Bouncy Castle JCE & PQC Provider Specification (1.78+)",
+      "cryptoAssets": [
+        {
+          "name": "Bouncy Castle Post-Quantum Primitives (ML-KEM / ML-DSA / SLH-DSA)",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "768 / 65",
+          "remediation": "NIST FIPS 203/204/205 PQC algorithms supported in bcprov-jdk18on 1.78+"
+        },
+        {
+          "name": "Bouncy Castle Classical Asymmetric & PKIX Suite (RSA / ECDSA / Ed25519)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256 / Ed25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048 / 256",
+          "remediation": "Transition classical X.509 and CMS signatures to hybrid or pure ML-DSA-65"
+        }
+      ]
     },
     {
-      "name": "metadata-extractor",
-      "purlPattern": "^pkg:maven/com\\.drewnoakes/metadata-extractor(@.*)?$",
-      "category": "parser",
+      "name": "jvm-jwt-libraries",
+      "purlPattern": "^pkg:maven/(com\\.nimbusds/nimbus-jose-jwt|io\\.jsonwebtoken/jjwt(-api|-impl|-jackson)?|com\\.auth0/java-jwt)(@.*)?$",
+      "category": "jwt-library",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert",
-      "cryptoAssets": []
+      "source": "JVM JOSE / JWT RFC 7515/7516/7519 Cryptographic Profile",
+      "cryptoAssets": [
+        {
+          "name": "JOSE / JWT Asymmetric Signing & Encryption (RS256 / ES256 / EdDSA)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256 / Ed25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048 / 256",
+          "remediation": "Migrate JWS/JWE asymmetric algorithms to IETF JOSE ML-DSA and ML-KEM"
+        },
+        {
+          "name": "JOSE / JWT Symmetric HMAC & AES-GCM (HS256 / A256GCM)",
+          "primitive": "mac",
+          "algorithm": "HMAC-SHA256 / AES-256-GCM",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit symmetric JWS/JWE primitives are quantum-resistant"
+        }
+      ]
     },
     {
-      "name": "micrometer-registry-prometheus",
-      "purlPattern": "^pkg:maven/io\\.micrometer/micrometer-registry-prometheus(@.*)?$",
-      "category": "telemetry",
+      "name": "jvm-tls-http-and-db-drivers",
+      "purlPattern": "^pkg:maven/(io\\.netty/netty-(handler|tcnative.*)|com\\.squareup\\.okhttp3/okhttp|org\\.apache\\.httpcomponents(\\.client5)?/httpclient5?|org\\.postgresql/postgresql|com\\.mysql/mysql-connector-j|io\\.lettuce/lettuce-core|io\\.grpc/grpc-netty.*)(@.*)?$",
+      "category": "transport-client",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert",
-      "cryptoAssets": []
+      "source": "JVM TLS / Database / RPC Transport Security Profile",
+      "cryptoAssets": [
+        {
+          "name": "JVM TLS 1.3 / JSSE / BoringSSL Client Transport",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.3",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Enable hybrid X25519MLKEM768 key exchange in JSSE / Netty BoringSSL"
+        }
+      ]
     },
     {
-      "name": "aspectjweaver",
-      "purlPattern": "^pkg:maven/org\\.aspectj/aspectjweaver(@.*)?$",
-      "category": "bytecode",
+      "name": "jvm-common-inert-libraries",
+      "purlPattern": "^pkg:maven/(com\\.fasterxml\\.jackson\\..*/jackson-.*|org\\.jsoup/jsoup|com\\.drewnoakes/metadata-extractor|io\\.micrometer/micrometer-.*|org\\.aspectj/aspectjweaver|org\\.springframework\\.boot/spring-boot.*|org\\.springframework/spring-(core|beans|context|aop|expression|jcl|tx|jdbc|orm|messaging|test)|org\\.slf4j/slf4j-.*|ch\\.qos\\.logback/logback-.*|org\\.projectlombok/lombok|com\\.google\\.guava/guava|org\\.apache\\.commons/commons-.*|commons-io/commons-io|commons-codec/commons-codec|com\\.zaxxer/HikariCP|org\\.hibernate\\.orm/hibernate-.*|org\\.jetbrains\\.kotlin/kotlin-.*|org\\.jetbrains\\.kotlinx/kotlinx-.*|org\\.junit\\..*/junit-.*|org\\.mockito/mockito-.*|org\\.assertj/assertj-.*)(@.*)?$",
+      "category": "application-library",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert",
+      "source": "Verified Cryptographically Inert (JVM DI, Serialization, Logging, ORM, Testing & Utilities)",
       "cryptoAssets": []
     },
     {
       "name": "openssl",
-      "purlPattern": "^pkg:(deb|rpm|apk|generic)/(debian|ubuntu|alpine|fedora|redhat|arch)?/?openssl(@.*)?$",
+      "purlPattern": "^pkg:(deb|rpm|apk|generic|conan|vcpkg|cargo)/(debian|ubuntu|alpine|fedora|redhat|arch)?/?openssl(@.*)?$",
       "category": "system-library",
       "confidence": "HIGH",
       "source": "OpenSSL Project Specification (FIPS 140-3 / Post-Quantum Provider)",
@@ -115,7 +175,7 @@
           "algorithm": "TLS 1.3 / X25519 / RSA / ECDSA",
           "pqc_status": "QUANTUM-VULNERABLE",
           "key_length": "RSA-2048 / 4096 / P-256 / X25519",
-          "remediation": "Upgrade OpenSSL to 3.4+ and enable oqs-provider for ML-KEM-768 hybrid key exchange"
+          "remediation": "Upgrade OpenSSL to 3.5+ native ML-KEM-768 / ML-DSA-65 or enable oqs-provider"
         },
         {
           "name": "OpenSSL Symmetric Crypto & Hashes",
@@ -140,7 +200,7 @@
           "algorithm": "TLS 1.2 / TLS 1.3",
           "pqc_status": "QUANTUM-VULNERABLE",
           "key_length": "X25519 / P-256 / RSA-2048",
-          "remediation": "Deploy ML-KEM enabled provider"
+          "remediation": "Deploy OpenSSL 3.5+ ML-KEM enabled provider"
         }
       ]
     },
@@ -191,7 +251,7 @@
           "algorithm": "TLS 1.2 / TLS 1.3",
           "pqc_status": "QUANTUM-VULNERABLE",
           "key_length": "ECDH-X25519 / RSA-2048",
-          "remediation": "Compile with BoringSSL/OpenSSL 3.4+ supporting X25519MLKEM768 key exchange"
+          "remediation": "Compile with BoringSSL/OpenSSL 3.5+ supporting X25519MLKEM768 key exchange"
         }
       ]
     },
@@ -251,6 +311,65 @@
           "pqc_status": "QUANTUM-VULNERABLE",
           "key_length": "2048 / 256",
           "remediation": "Migrate asymmetric PKI/JWT workflows to OpenSSL 3.5+ ML-KEM (FIPS 203) and ML-DSA (FIPS 204)"
+        }
+      ]
+    },
+    {
+      "name": "python-crypto-and-auth-libraries",
+      "purlPattern": "^pkg:pypi/(pycryptodome|pycryptodomex|pynacl|paramiko|pyopenssl|authlib|python-jose|jwcrypto|ecdsa)(@.*)?$",
+      "category": "crypto-library",
+      "confidence": "HIGH",
+      "source": "Python Cryptographic & SSH/JOSE Library Specification",
+      "cryptoAssets": [
+        {
+          "name": "Python Asymmetric & Key Exchange Primitives (RSA / ECDSA / Ed25519 / X25519)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256 / Ed25519 / X25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048 / 256",
+          "remediation": "Transition asymmetric signatures and key exchanges to ML-KEM-768 and ML-DSA-65"
+        },
+        {
+          "name": "Python Symmetric AEAD & Digest Suite (AES-256-GCM / ChaCha20-Poly1305 / SHA-256)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit symmetric AEAD and SHA-256+ are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "python-kdf-libraries",
+      "purlPattern": "^pkg:pypi/(bcrypt|argon2-cffi|argon2-cffi-bindings|passlib|scrypt)(@.*)?$",
+      "category": "kdf-library",
+      "confidence": "HIGH",
+      "source": "Python Password Hashing & Key Derivation Specification",
+      "cryptoAssets": [
+        {
+          "name": "Password Hashing & Key Derivation (Argon2id / bcrypt / scrypt / PBKDF2)",
+          "primitive": "kdf",
+          "algorithm": "Argon2id / bcrypt",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Memory-hard KDFs with 256-bit output are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "python-pqc-oqs",
+      "purlPattern": "^pkg:pypi/(liboqs-python|oqs|pqcrypto)(@.*)?$",
+      "category": "pqc-library",
+      "confidence": "HIGH",
+      "source": "Open Quantum Safe (liboqs) Python Bindings Specification",
+      "cryptoAssets": [
+        {
+          "name": "Open Quantum Safe KEM & Signatures (ML-KEM-768 / ML-DSA-65 / SLH-DSA)",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "768 / 65",
+          "remediation": "NIST FIPS 203/204/205 compliant post-quantum cryptography"
         }
       ]
     },
@@ -374,13 +493,13 @@
     },
     {
       "name": "requests",
-      "purlPattern": "^pkg:pypi/requests(@.*)?$",
+      "purlPattern": "^pkg:pypi/(requests|httpx|httpcore|aiohttp|boto3|botocore|grpcio)(@.*)?$",
       "category": "http-client",
       "confidence": "HIGH",
-      "source": "Python Requests HTTPS/TLS Transport Profile",
+      "source": "Python HTTPS/TLS & Cloud SDK Transport Profile",
       "cryptoAssets": [
         {
-          "name": "Requests HTTPS Session TLS 1.2 / 1.3 Client",
+          "name": "HTTPS Session TLS 1.2 / 1.3 Client",
           "primitive": "protocol",
           "algorithm": "TLS 1.3",
           "pqc_status": "CLASSICAL/SYMMETRIC",
@@ -425,26 +544,26 @@
     },
     {
       "name": "pymysql",
-      "purlPattern": "^pkg:pypi/pymysql(@.*)?$",
+      "purlPattern": "^pkg:pypi/(pymysql|psycopg|psycopg2|psycopg2-binary|asyncpg|redis)(@.*)?$",
       "category": "database-driver",
       "confidence": "HIGH",
-      "source": "PyMySQL Authentication & TLS Protocol Specification",
+      "source": "Database Authentication & TLS Protocol Specification",
       "cryptoAssets": [
         {
-          "name": "MySQL caching_sha2_password Digest & RSA Key Exchange",
+          "name": "Database SCRAM-SHA-256 / caching_sha2_password Digest & TLS Transport",
           "primitive": "hash",
           "algorithm": "SHA-256",
           "pqc_status": "CLASSICAL/SYMMETRIC",
           "key_length": "256",
-          "remediation": "Enforce caching_sha2_password over TLS 1.3; disable legacy mysql_native_password (SHA-1)"
+          "remediation": "Enforce SCRAM-SHA-256 / caching_sha2_password over TLS 1.3"
         },
         {
-          "name": "MySQL Legacy mysql_native_password & RSA Public Key Encryption",
+          "name": "Database TLS & Public Key Handshake",
           "primitive": "signature",
-          "algorithm": "RSA-2048 / SHA-1",
+          "algorithm": "RSA-2048 / ECDSA-P256",
           "pqc_status": "QUANTUM-VULNERABLE",
-          "key_length": "2048 / 160",
-          "remediation": "Require TLS 1.3 transport for MySQL connections to avoid standalone RSA/SHA-1 password exchange"
+          "key_length": "2048 / 256",
+          "remediation": "Require TLS 1.3 with hybrid PQC key exchange on database connections"
         }
       ]
     },
@@ -491,11 +610,11 @@
       "cryptoAssets": []
     },
     {
-      "name": "python-media-utilities",
-      "purlPattern": "^pkg:pypi/(pillow|pillow-heif|rawpy|exifread|reverse-geocoder|reverse_geocoder|pycountry|rich|tqdm|python-dotenv|cachetools|uritemplate|charset-normalizer|idna|cffi|colorama|google-api-core|markdown-it-py|mdurl|numpy|pygments|scipy|typing-extensions|pycparser|packaging|six|proto-plus|protobuf|googleapis-common-protos)(@.*)?$",
+      "name": "python-common-inert-utilities",
+      "purlPattern": "^pkg:pypi/(pillow|pillow-heif|rawpy|exifread|reverse-geocoder|reverse_geocoder|pycountry|rich|tqdm|python-dotenv|cachetools|uritemplate|charset-normalizer|idna|cffi|colorama|google-api-core|markdown-it-py|mdurl|numpy|pygments|scipy|typing-extensions|pycparser|packaging|six|proto-plus|protobuf|googleapis-common-protos|fastapi|starlette|pydantic|pydantic-core| pydantic-settings|uvicorn|gunicorn|click|typer|jinja2|markupsafe|pyyaml|toml|tomli|tomli-w|attrs|pytest|pytest-cov|pytest-asyncio|coverage|ruff|black|mypy|flake8|isort|pandas|polars|matplotlib|seaborn|scikit-learn|flask|werkzeug|itsdangerous|django|sqlparse|asgiref|sqlalchemy|alembic|celery|kombu|billiard|vine|amqp|anyio|sniffio|h11|multidict|yarl|frozenlist|aiosignal|async-timeout|greenlet|dnspython|email-validator|python-multipart|orjson|ujson|msgpack|tenacity|structlog|loguru|distro|filelock|platformdirs|virtualenv|pluggy|iniconfig|jmespath|s3transfer|python-dateutil|pytz|tzdata|babel|soupsieve|beautifulsoup4|lxml|defusedxml|openpyxl|xlrd|reportlab|pypdf|fpdf2)(@.*)?$",
       "category": "application-library",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert (Media Decoding, EXIF, Geocoding, FFI & CLI Formatting)",
+      "source": "Verified Cryptographically Inert (Web Frameworks, Data Science, Serialization, CLI & Testing Utilities)",
       "cryptoAssets": []
     },
     {
@@ -525,7 +644,7 @@
     },
     {
       "name": "jose",
-      "purlPattern": "^pkg:npm/jose(@.*)?$",
+      "purlPattern": "^pkg:npm/(jose|jsonwebtoken|jws|jwa|node-jose|jwks-rsa|passport-jwt|openid-client|oauth4webapi)(@.*)?$",
       "category": "jwt-library",
       "confidence": "HIGH",
       "source": "IETF JOSE (RFC 7515 JWS / RFC 7516 JWE / RFC 7519 JWT) Cryptographic Profile",
@@ -545,6 +664,23 @@
           "pqc_status": "CLASSICAL/SYMMETRIC",
           "key_length": "256",
           "remediation": "256-bit AEAD and HMAC are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "noble-post-quantum",
+      "purlPattern": "^pkg:npm/(%40|@)noble/post-quantum(@.*)?$",
+      "category": "pqc-library",
+      "confidence": "HIGH",
+      "source": "Noble Audited Post-Quantum Cryptography (ML-KEM / ML-DSA / SLH-DSA)",
+      "cryptoAssets": [
+        {
+          "name": "Noble Post-Quantum KEM & Signatures (ML-KEM-768 / ML-DSA-65 / SLH-DSA)",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "768 / 65",
+          "remediation": "NIST FIPS 203/204/205 Post-Quantum Cryptography"
         }
       ]
     },
@@ -583,14 +719,56 @@
       ]
     },
     {
-      "name": "better-auth",
-      "purlPattern": "^pkg:npm/((%40|@)better-auth/(core|utils)|better-auth)(@.*)?$",
-      "category": "auth-framework",
+      "name": "npm-asymmetric-and-crypto-suites",
+      "purlPattern": "^pkg:npm/((%40|@)noble/(curves|secp256k1|ed25519)|elliptic|tweetnacl|libsodium-wrappers|node-forge|crypto-js)(@.*)?$",
+      "category": "crypto-library",
       "confidence": "HIGH",
-      "source": "Better Auth Session, OIDC & CSRF Cryptographic Specification",
+      "source": "JavaScript Asymmetric & General Cryptographic Library Profile",
       "cryptoAssets": [
         {
-          "name": "Better Auth Session Token Signing & CSRF HMAC",
+          "name": "JS Elliptic Curve & RSA Primitives (ECDSA / Ed25519 / X25519 / RSA)",
+          "primitive": "signature",
+          "algorithm": "ECDSA-P256 / Ed25519 / X25519 / RSA-2048",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256 / 2048",
+          "remediation": "Migrate asymmetric curves to @noble/post-quantum (ML-KEM-768 / ML-DSA-65)"
+        },
+        {
+          "name": "JS Symmetric Ciphers & Digests (AES-256-GCM / ChaCha20-Poly1305 / SHA-256)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / SHA-256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit symmetric primitives are Grover-resistant"
+        }
+      ]
+    },
+    {
+      "name": "npm-kdf-libraries",
+      "purlPattern": "^pkg:npm/(bcrypt|bcryptjs|argon2)(@.*)?$",
+      "category": "kdf-library",
+      "confidence": "HIGH",
+      "source": "Node.js Password Hashing & KDF Specification",
+      "cryptoAssets": [
+        {
+          "name": "Node.js Password Hashing (Argon2id / bcrypt)",
+          "primitive": "kdf",
+          "algorithm": "Argon2id / bcrypt",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Password hashing KDFs are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "better-auth",
+      "purlPattern": "^pkg:npm/((%40|@)better-auth/(core|utils)|better-auth|next-auth|(%40|@)auth/core)(@.*)?$",
+      "category": "auth-framework",
+      "confidence": "HIGH",
+      "source": "Session, OIDC & CSRF Cryptographic Specification",
+      "cryptoAssets": [
+        {
+          "name": "Auth Session Token Signing & CSRF HMAC",
           "primitive": "mac",
           "algorithm": "HMAC-SHA256",
           "pqc_status": "CLASSICAL/SYMMETRIC",
@@ -598,7 +776,7 @@
           "remediation": "256-bit HMAC session authentication is quantum-resistant"
         },
         {
-          "name": "Better Auth OIDC / WebAuthn Asymmetric Verification (ES256 / RS256 / Ed25519)",
+          "name": "Auth OIDC / WebAuthn Asymmetric Verification (ES256 / RS256 / Ed25519)",
           "primitive": "signature",
           "algorithm": "ECDSA-P256 / RSA-2048 / Ed25519",
           "pqc_status": "QUANTUM-VULNERABLE",
@@ -626,15 +804,215 @@
     },
     {
       "name": "nodejs-web-and-utility-libraries",
-      "purlPattern": "^pkg:npm/((%40|@)better-auth/(drizzle|kysely|memory|mongo|prisma)-adapter|(%40|@)better-auth/telemetry|(%40|@)better-fetch/fetch|(%40|@)pinojs/redact|(%40|@)standard-schema/spec|accepts|atomic-sleep|better-call|better-sqlite3|body-parser|bytes|call-bind-apply-helpers|call-bound|content-disposition|content-type|cookie|cookie-parser|cors|debug|defu|depd|dunder-proto|ee-first|encodeurl|es-define-property|es-errors|es-object-atoms|escape-html|etag|express|express-rate-limit|finalhandler|forwarded|fresh|function-bind|get-caller-file|get-intrinsic|get-proto|gopd|has-symbols|hasown|helmet|http-errors|iconv-lite|inherits|ip-address|ipaddr\\.js|is-promise|kysely|math-intrinsics|media-typer|merge-descriptors|mime-db|mime-types|ms|nanostores|negotiator|node-addon-api|object-assign|object-inspect|on-exit-leak-free|on-finished|once|parseurl|path-to-regexp|pino|pino-abstract-transport|pino-http|pino-std-serializers|process-warning|proxy-addr|qs|quick-format-unescaped|range-parser|raw-body|real-require|rou3|router|safe-stable-stringify|safer-buffer|send|serve-static|set-cookie-parser|setprototypeof|side-channel|side-channel-list|side-channel-map|side-channel-weakmap|sonic-boom|split2|statuses|thread-stream|toidentifier|type-is|unpipe|vary|wrappy|zod)(@.*)?$",
+      "purlPattern": "^pkg:npm/((%40|@)better-auth/(drizzle|kysely|memory|mongo|prisma)-adapter|(%40|@)better-auth/telemetry|(%40|@)better-fetch/fetch|(%40|@)pinojs/redact|(%40|@)standard-schema/spec|(%40|@)types/.*|(%40|@)babel/.*|(%40|@)eslint/.*|(%40|@)typescript-eslint/.*|(%40|@)vitejs/.*|(%40|@)vitest/.*|(%40|@)testing-library/.*|(%40|@)tanstack/.*|(%40|@)radix-ui/.*|(%40|@)headlessui/.*|(%40|@)heroicons/.*|(%40|@)prisma/client|accepts|atomic-sleep|axios|better-call|better-sqlite3|body-parser|bytes|call-bind-apply-helpers|call-bound|chalk|classnames|clsx|commander|compression|content-disposition|content-type|cookie|cookie-parser|cors|cross-env|date-fns|dayjs|debug|defu|depd|dotenv|drizzle-orm|dunder-proto|ee-first|encodeurl|es-define-property|es-errors|es-object-atoms|esbuild|escape-html|eslint|etag|express|express-rate-limit|fast-glob|fastq|finalhandler|forwarded|fresh|fs-extra|function-bind|get-caller-file|get-intrinsic|get-proto|glob|gopd|got|has-symbols|hasown|helmet|http-errors|iconv-lite|immer|inherits|ioredis|ip-address|ipaddr\\.js|is-promise|jest|kysely|lodash|lodash-es|lucide-react|math-intrinsics|media-typer|merge-descriptors|mime-db|mime-types|minimatch|minimist|mongodb|mongoose|morgan|ms|mysql2|nanoid|nanostores|negotiator|next|node-addon-api|node-fetch|nodemailer|object-assign|object-inspect|on-exit-leak-free|on-finished|once|ora|p-limit|parseurl|path-to-regexp|pg|picocolors|pino|pino-abstract-transport|pino-http|pino-std-serializers|postcss|prettier|prisma|process-warning|proxy-addr|qs|quick-format-unescaped|range-parser|raw-body|react|react-dom|react-router|react-router-dom|real-require|redis|rimraf|llup|rou3|router|rxjs|safe-stable-stringify|safer-buffer|semver|send|serve-static|set-cookie-parser|setprototypeof|sharp|side-channel|side-channel-list|side-channel-map|side-channel-weakmap|socket\\.io|sonic-boom|split2|statuses|styled-components|Supertest|svelte|tailwind-merge|tailwindcss|thread-stream|toidentifier|ts-node|tslib|tsx|turbo|type-is|typescript|undici|unpipe|uuid|vary|vite|vitest|vue|webpack|wrappy|ws|yaml|yargs|zod|zustand)(@.*)?$",
       "category": "application-library",
       "confidence": "HIGH",
-      "source": "Verified Cryptographically Inert (HTTP Routing, Middleware, Logging, SQLite/ORM Adapters & Schema Validation)",
+      "source": "Verified Cryptographically Inert (UI, HTTP Routing, Middleware, Logging, ORM Adapters, Build & Schema Validation)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "go-pqc-libraries",
+      "purlPattern": "^pkg:golang/(github\\.com/cloudflare/circl|github\\.com/open-quantum-safe/liboqs-go)(@.*)?$",
+      "category": "pqc-library",
+      "confidence": "HIGH",
+      "source": "Cloudflare CIRCL / Open Quantum Safe Go PQC Reference Specification",
+      "cryptoAssets": [
+        {
+          "name": "Go Post-Quantum KEM & Signatures (ML-KEM-768 / ML-DSA-65 / X25519Kyber768)",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "768 / 65",
+          "remediation": "NIST FIPS 203/204 Post-Quantum Cryptography"
+        }
+      ]
+    },
+    {
+      "name": "go-x-crypto-and-jwt",
+      "purlPattern": "^pkg:golang/(golang\\.org/x/crypto|golang\\.org/x/oauth2|github\\.com/golang-jwt/jwt.*|github\\.com/lestrrat-go/jwx.*|filippo\\.io/edwards25519|filippo\\.io/age)(@.*)?$",
+      "category": "crypto-library",
+      "confidence": "HIGH",
+      "source": "Go Extended Cryptography & JWT/OAuth2 Specification",
+      "cryptoAssets": [
+        {
+          "name": "Go Asymmetric Signatures & Key Exchange (Ed25519 / X25519 / RSA / ECDSA)",
+          "primitive": "signature",
+          "algorithm": "Ed25519 / X25519 / ECDSA-P256 / RSA-2048",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256 / 2048",
+          "remediation": "Adopt Go 1.24+ crypto/mlkem (ML-KEM-768) and CIRCL ML-DSA-65"
+        },
+        {
+          "name": "Go Symmetric AEAD, SHA-3 & KDFs (ChaCha20-Poly1305 / Argon2id / bcrypt / HKDF)",
+          "primitive": "block-cipher",
+          "algorithm": "ChaCha20-Poly1305 / Argon2id / SHA3-256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit AEAD, SHA-3, and Argon2id are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "go-tls-and-db-drivers",
+      "purlPattern": "^pkg:golang/(golang\\.org/x/net|google\\.golang\\.org/grpc|github\\.com/jackc/pgx.*|github\\.com/lib/pq|github\\.com/go-sql-driver/mysql|github\\.com/redis/go-redis.*|github\\.com/aws/aws-sdk-go.*)(@.*)?$",
+      "category": "transport-client",
+      "confidence": "HIGH",
+      "source": "Go crypto/tls & Database Transport Profile",
+      "cryptoAssets": [
+        {
+          "name": "Go crypto/tls 1.3 Client & Server Transport (X25519MLKEM768 default in Go 1.24+)",
+          "primitive": "protocol",
+          "algorithm": "TLS 1.3",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "Build with Go 1.24+ where crypto/tls enables X25519MLKEM768 hybrid PQC key exchange by default"
+        }
+      ]
+    },
+    {
+      "name": "go-common-inert-modules",
+      "purlPattern": "^pkg:golang/(github\\.com/gin-gonic/gin|github\\.com/gofiber/fiber.*|github\\.com/labstack/echo.*|github\\.com/go-chi/chi.*|github\\.com/gorilla/mux|github\\.com/spf13/(cobra|viper|pflag|afero|cast)|github\\.com/stretchr/testify|go\\.uber\\.org/(zap|multierr|atomic)|github\\.com/sirupsen/logrus|github\\.com/rs/zerolog|gorm\\.io/.*|google\\.golang\\.org/protobuf|golang\\.org/x/(sys|text|sync|tools|time|exp|mod)|github\\.com/google/uuid|github\\.com/prometheus/client_golang|gopkg\\.in/yaml\\..*)(@.*)?$",
+      "category": "application-library",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Go Routing, CLI, Logging, Protobuf & Testing Modules)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "rust-pqc-crates",
+      "purlPattern": "^pkg:cargo/(ml-kem|ml-dsa|slh-dsa|pqcrypto.*|oqs|fips203|fips204|fips205)(@.*)?$",
+      "category": "pqc-library",
+      "confidence": "HIGH",
+      "source": "RustCrypto / Open Quantum Safe Post-Quantum Crates Specification",
+      "cryptoAssets": [
+        {
+          "name": "Rust Post-Quantum KEM & Signatures (ML-KEM-768 / ML-DSA-65 / SLH-DSA)",
+          "primitive": "kem",
+          "algorithm": "ML-KEM-768 / ML-DSA-65",
+          "pqc_status": "POST-QUANTUM READY",
+          "key_length": "768 / 65",
+          "remediation": "NIST FIPS 203/204/205 compliant post-quantum cryptography"
+        }
+      ]
+    },
+    {
+      "name": "rust-crypto-and-tls-crates",
+      "purlPattern": "^pkg:cargo/(ring|aws-lc-rs|rustls|rustls-webpki|webpki|tokio-rustls|hyper-rustls|native-tls|reqwest|tonic|jsonwebtoken|ed25519-dalek|x25519-dalek|curve25519-dalek|p256|p384|k256|rsa|secp256k1)(@.*)?$",
+      "category": "crypto-library",
+      "confidence": "HIGH",
+      "source": "Rust Cryptography (ring / aws-lc-rs / rustls / dalek / RustCrypto) Profile",
+      "cryptoAssets": [
+        {
+          "name": "Rust Asymmetric Primitives & TLS Key Exchange (Ed25519 / X25519 / ECDSA-P256 / RSA-2048)",
+          "primitive": "signature",
+          "algorithm": "Ed25519 / X25519 / ECDSA-P256 / RSA-2048",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "256 / 2048",
+          "remediation": "Enable rustls aws-lc-rs post-quantum hybrid KX (X25519MLKEM768) and ml-dsa crates"
+        },
+        {
+          "name": "Rust Symmetric AEAD & Digests (AES-256-GCM / ChaCha20-Poly1305 / SHA-256)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit AEAD and digests are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "rust-symmetric-and-kdf-crates",
+      "purlPattern": "^pkg:cargo/(aes|aes-gcm|chacha20poly1305|sha2|sha3|blake2|blake3|hmac|hkdf|pbkdf2|argon2|scrypt|bcrypt|digest|cipher|crypto-common|aead|subtle|zeroize)(@.*)?$",
+      "category": "crypto-library",
+      "confidence": "HIGH",
+      "source": "RustCrypto Symmetric, Digest & KDF Crates Specification",
+      "cryptoAssets": [
+        {
+          "name": "RustCrypto Symmetric AEAD, Hashes & KDFs (AES-256-GCM / ChaCha20-Poly1305 / SHA-256 / BLAKE3 / Argon2id)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / SHA-256 / BLAKE3 / Argon2id",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit symmetric ciphers, hashes, and KDFs are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "rust-common-inert-crates",
+      "purlPattern": "^pkg:cargo/(serde|serde_json|serde_derive|tokio|tokio-macros|tokio-util|futures.*|anyhow|thiserror.*|tracing.*|log|env_logger|clap.*|regex.*|chrono|uuid|bytes|syn|quote|proc-macro2|axum.*|actix-web|actix-rt|tower.*|hyper|hyper-util|http|http-body.*|sqlx|sea-orm|diesel|itertools|once_cell|lazy_static|parking_lot|crossbeam.*|rayon|num-traits|bitflags|cfg-if|libc|winapi|windows-sys| indexmap|hashbrown|smallvec|memchr|aho-corasick| base64|hex|url|percent-encoding|mime|pin-project.*|async-trait)(@.*)?$",
+      "category": "application-library",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Rust Async Runtime, Serialization, Macros, HTTP Routing & Collections)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "dotnet-crypto-and-identity-packages",
+      "purlPattern": "^pkg:nuget/(BouncyCastle\\.Cryptography|System\\.IdentityModel\\.Tokens\\.Jwt|Microsoft\\.IdentityModel\\..*|Microsoft\\.Identity\\.(Client|Web).*|NSec\\.Cryptography|Konscious\\.Security\\.Cryptography\\..*|BCrypt\\.Net-Next)(@.*)?$",
+      "category": "crypto-library",
+      "confidence": "HIGH",
+      "source": ".NET Cryptography, BouncyCastle & Microsoft Entra / JWT Identity Profile",
+      "cryptoAssets": [
+        {
+          "name": ".NET Asymmetric JWS / PKI Signatures & Key Exchange (RSA-2048 / ECDSA-P256 / Ed25519)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048 / 256",
+          "remediation": "Adopt .NET 9+ System.Security.Cryptography MLKem, MLDsa, and SlhDsa APIs or BouncyCastle.Cryptography PQC"
+        },
+        {
+          "name": ".NET Symmetric AEAD, HMAC & KDFs (AES-256-GCM / HMAC-SHA256 / Argon2id / PBKDF2)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / HMAC-SHA256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit symmetric primitives are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "dotnet-common-inert-packages",
+      "purlPattern": "^pkg:nuget/(Newtonsoft\\.Json|System\\.Text\\.Json|Microsoft\\.Extensions\\..*|Microsoft\\.EntityFrameworkCore.*|Microsoft\\.AspNetCore\\..*|Serilog.*|AutoMapper.*|MediatR.*|FluentValidation.*|xunit.*|Moq|NSubstitute|FluentAssertions|Polly.*|Dapper|StackExchange\\.Redis|Npgsql.*|MySqlConnector|Microsoft\\.Data\\.SqlClient|Grpc\\..*|Google\\.Protobuf|Swashbuckle\\..*)(@.*)?$",
+      "category": "application-library",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (.NET DI, ORM, Logging, Serialization & Testing Packages)",
+      "cryptoAssets": []
+    },
+    {
+      "name": "ruby-php-swift-dart-elixir-crypto-packages",
+      "purlPattern": "^pkg:(gem/(openssl|jwt|bcrypt|rbnacl|ed25519|net-ssh|devise)|composer/(firebase/php-jwt|lcobucci/jwt|phpseclib/phpseclib|paragonie/halite|paragonie/sodium_compat|defuse/php-encryption|laravel/sanctum|laravel/passport)|swift/(swift-crypto|CryptoSwift)|pub/(cryptography|pointycastle|crypto)|hex/(jose|plug_crypto|argon2_elixir|bcrypt_elixir)|conan/(openssl|libsodium|mbedtls|wolfssl|botan|cryptopp|liboqs)|vcpkg/(openssl|libsodium|mbedtls|wolfssl|botan|cryptopp|liboqs))(@.*)?$",
+      "category": "crypto-library",
+      "confidence": "HIGH",
+      "source": "Multi-Ecosystem Cryptographic & JWT/Auth Library Profile (Ruby, PHP, Swift, Dart, Elixir, C/C++)",
+      "cryptoAssets": [
+        {
+          "name": "Ecosystem Asymmetric Signatures & Key Agreement (RSA-2048 / ECDSA-P256 / Ed25519 / X25519)",
+          "primitive": "signature",
+          "algorithm": "RSA-2048 / ECDSA-P256 / Ed25519 / X25519",
+          "pqc_status": "QUANTUM-VULNERABLE",
+          "key_length": "2048 / 256",
+          "remediation": "Plan transition of asymmetric primitives to NIST FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA)"
+        },
+        {
+          "name": "Ecosystem Symmetric AEAD, Digests & KDFs (AES-256-GCM / ChaCha20-Poly1305 / SHA-256 / Argon2id)",
+          "primitive": "block-cipher",
+          "algorithm": "AES-256-GCM / ChaCha20-Poly1305 / SHA-256",
+          "pqc_status": "CLASSICAL/SYMMETRIC",
+          "key_length": "256",
+          "remediation": "256-bit symmetric AEAD, SHA-256+, and Argon2id are quantum-resistant"
+        }
+      ]
+    },
+    {
+      "name": "ruby-php-dart-elixir-common-inert-packages",
+      "purlPattern": "^pkg:(gem/(rails|activesupport|activerecord|actionpack|actionview|activejob|actionmailer|rack.*|puma|sidekiq|nokogiri|rspec.*|rubocop.*|bundler|rake|faraday|pg|mysql2|redis|concurrent-ruby|i18n|tzinfo|thor|zeitwerk|bootsnap)|composer/(symfony/.*|laravel/framework|illuminate/.*|monolog/monolog|phpunit/phpunit|psr/.*|doctrine/.*|guzzlehttp/.*|nesbot/carbon|ramsey/uuid|vlucas/phpdotenv)|pub/(flutter.*|http|dio|provider|riverpod|bloc|flutter_bloc|shared_preferences|sqflite|path_provider|json_annotation|freezed_annotation|equatable|intl)|hex/(phoenix.*|ecto.*|plug|cowboy|bandit|jason|req|finch|oban|gettext|telemetry.*))(@.*)?$",
+      "category": "application-library",
+      "confidence": "HIGH",
+      "source": "Verified Cryptographically Inert (Web Frameworks, ORM, HTTP Routing & Standard Utilities)",
       "cryptoAssets": []
     },
     {
       "name": "github-actions-ci-toolchain",
-      "purlPattern": "^pkg:github/(actions|anchore|aquasecurity|cbomkit|docker|github|gitleaks|mathieudutour|ncipollo|oras-project|peter-evans|returntocorp|semgrep|softprops|wagoid)/.*(@.*)?$",
+      "purlPattern": "^pkg:github/(actions|anchore|aquasecurity|cbomkit|docker|github|gitleaks|jsoehner|mathieudutour|ncipollo|oras-project|peter-evans|returntocorp|semgrep|softprops|wagoid)/.*(@.*)?$",
       "category": "ci-cd-action",
       "confidence": "HIGH",
       "source": "Verified CI/CD DevSecOps Pipeline Action (Pinned 40-char Commit SHA)",
