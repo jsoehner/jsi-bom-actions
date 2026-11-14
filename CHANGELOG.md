@@ -5,6 +5,11 @@ All notable changes to `jsi-bom-actions` composite action and reusable workflows
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-11-14
+
+### Fixed
+- **Duplicate GitHub Actions Step Summary Reports**: Fixed `scripts/analyze_cbom.py` writing to `$GITHUB_STEP_SUMMARY` whenever the environment variable was present—even when invoked without `--step-summary` from `scripts/test_boms.sh`. Step summaries are now only appended when `--step-summary` is explicitly passed.
+
 ## [1.1.0] - 2026-11-11
 
 ### Added

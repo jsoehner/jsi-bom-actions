@@ -792,7 +792,7 @@ def main():
             f.write(md_content)
         print(f"Saved Markdown report to: {args.markdown}")
 
-    if args.step_summary or "GITHUB_STEP_SUMMARY" in os.environ:
+    if args.step_summary:
         step_summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
         if step_summary_path:
             with open(step_summary_path, "a", encoding="utf-8") as f:
