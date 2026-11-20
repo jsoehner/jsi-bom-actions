@@ -366,7 +366,7 @@ ${GRADLE_SETUP}
       # 6. Publish Cryptographic Audit Report to Repository (docs/security)
       # -------------------------------------------------------------
       - name: Publish Cryptographic Audit Report to Repository
-        if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+        if: github.event_name == 'push' && github.ref_type == 'branch' && !contains(github.event.head_commit.message, '[skip ci]')
         run: |
           if [ -f oss/crypto-summary.md ]; then
             mkdir -p docs/security

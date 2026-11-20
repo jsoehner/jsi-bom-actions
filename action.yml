@@ -212,9 +212,13 @@ runs:
           --step-summary
 
     - name: Publish Cryptographic Audit Report to Repository
-      if: inputs.publish-audit-report == 'true' && github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+      if: inputs.publish-audit-report == 'true' && github.event_name == 'push' && github.ref_type == 'branch' && !contains(github.event.head_commit.message, '[skip ci]')
       shell: bash
       run: |
+        if [ "${GITHUB_REF_TYPE:-}" != "branch" ]; then
+          echo "Skipping audit report publish on non-branch ref (${GITHUB_REF:-unknown})."
+          exit 0
+        fi
         if [ -f "${{ inputs.output-dir }}/crypto-summary.md" ]; then
           mkdir -p "$(dirname "${{ inputs.audit-report-path }}")"
           cp "${{ inputs.output-dir }}/crypto-summary.md" "${{ inputs.audit-report-path }}"
@@ -233,16 +237,16 @@ runs:
             RETRY_COUNT=0
             PUSHED=false
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if git push origin "HEAD:$TARGET_BRANCH"; then
+              if git push origin "HEAD:refs/heads/$TARGET_BRANCH"; then
                 PUSHED=true
                 echo "Successfully published cryptographic audit report to $TARGET_BRANCH."
                 break
               else
                 RETRY_COUNT=$((RETRY_COUNT + 1))
                 echo "::warning::Push conflict on $TARGET_BRANCH. Rebase retry $RETRY_COUNT of $MAX_RETRIES..."
-                git fetch origin "$TARGET_BRANCH"
+                git fetch origin "$TARGET_BRANCH" || break
                 git rebase "origin/$TARGET_BRANCH" || {
-                  git rebase --abort
+                  git rebase --abort 2>/dev/null || true
                   break
                 }
               fi

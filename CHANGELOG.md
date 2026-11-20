@@ -5,6 +5,12 @@ All notable changes to `jsi-bom-actions` composite action and reusable workflows
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-20
+
+### Fixed
+- **Tag Push Failure in Audit Report Publishing**: Restricted the `Publish Cryptographic Audit Report to Repository` step in `action.yml` and `scripts/install_to_repo.sh` to branch pushes (`github.ref_type == 'branch'`) and explicit `HEAD:refs/heads/$TARGET_BRANCH` push refspecs, preventing rejected tag pushes (`! [rejected] HEAD -> vX.Y.Z (already exists)`) and `git rebase --abort` exit code 128 failures on release tags.
+- **Self-Testing Workflow**: Updated `.github/workflows/sbom-cbom.yml` to run `uses: ./` so pushes, PRs, and release tags validate the repository's own `action.yml`.
+
 ## [1.2.0] - 2026-11-20
 
 ### Added
