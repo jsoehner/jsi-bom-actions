@@ -1,21 +1,21 @@
 ## 🛡️ Cryptographic Bill of Materials (CBOM) & PQC Migration Assessment
 
-**Format**: CycloneDX (v1.6) | **First-Party Code Crypto Assets**: 0 | **Total Tracked Crypto Assets**: 0
+**Format**: CycloneDX (v1.6) | **First-Party Code Crypto Assets**: 1 | **Total Tracked Crypto Assets**: 1
 
 ### 📊 Post-Quantum Migration Scorecard
 
 | Metric | Count | Migration Status |
 |---|---|---|
-| **Post-Quantum Ready (PQC)** | **0** | 🟢 Quantum-Resistant (NIST FIPS 203/204/205) |
+| **Post-Quantum Ready (PQC)** | **1** | 🟢 Quantum-Resistant (NIST FIPS 203/204/205) |
 | **Quantum-Vulnerable (Backlog)** | **0** | 🔴 At Risk of 'Harvest Now, Decrypt Later' |
 | **Classical Symmetric / Digest** | **0** | 🟡 Classical Security (Requires AES-256 / SHA-256+) |
-| **Asymmetric PQC Migration Progress** | **N/A (0 detected)** | (No asymmetric primitives detected in current scope) |
+| **Asymmetric PQC Migration Progress** | **100.0%** | (1 of 1 asymmetric/vulnerable primitives migrated) |
 
 ### 🎯 Cryptographic Supply Chain Coverage & Confidence
 
 | Evaluation Layer | Coverage / Status | Audit Confidence Assessment |
 |---|---|---|
-| **First-Party Code (`src/`, `scripts/`)** | **100% Audited** (0 Custom Primitives) | 🟢 **HIGH** (Direct AST & SAST verified) |
+| **First-Party Code (`src/`, `scripts/`)** | **100% Audited** (1 Crypto Primitive(s) Inventoried across Configuration (2), Python (4)) | 🟢 **HIGH** (Direct AST & SAST verified) |
 | **Third-Party Supply Chain** | **100.0%** (2 of 2 dependencies cataloged) | 🟢 HIGH (Known profiles assimilated) |
 | **Overall Audit Confidence Score** | **100.0%** | 🟢 HIGH (0 unassimilated supply chain dependencies) |
 
@@ -23,11 +23,13 @@
 
 ### ✅ Post-Quantum Ready Assets
 
-> ⚠️ **No Post-Quantum Ready assets detected.** Immediate migration planning recommended for asymmetric key exchanges and digital signatures.
+| Component Name | Primitive | Key/Parameter Set | PQC Standard | Provenance / Location(s) |
+|---|---|---|---|---|
+| `ML-DSA-65` | signature | 65 | ML-DSA (FIPS 204) | First-Party Code (SAST/AST)<br>`action.yml:58`<br>`action.yml:62`<br>`scripts/fetch_trusted_oss_cbom.py:114`<br>`scripts/fetch_trusted_oss_cbom.py:158`<br>`scripts/fetch_trusted_oss_cbom.py:164`<br>`scripts/fetch_trusted_oss_cbom.py:198` |
 
 ### ⚠️ Quantum-Vulnerable Assets & Remediation Plan
 
-> ℹ️ **No quantum-vulnerable asymmetric assets found.** Asymmetric cryptographic primitives were not detected in current scope.
+> ✅ **Zero quantum-vulnerable asymmetric assets found.** All public-key cryptography conforms to post-quantum standards.
 
 ### 🔒 Classical Symmetric & Digest Assets
 
