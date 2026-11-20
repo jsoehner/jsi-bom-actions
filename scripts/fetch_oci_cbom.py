@@ -11,6 +11,7 @@ the ORAS CLI, or regctl without pulling or running the full container image.
 import sys
 import os
 import json
+import ssl
 import argparse
 import subprocess
 import urllib.request
@@ -159,21 +160,103 @@ def shutil_which(cmd: str) -> Optional[str]:
     return shutil.which(cmd)
 
 
+def try_fetch_via_http_referrers(
+    image_ref: str,
+    output_path: Path,
+    artifact_type: str = "application/vnd.cyclonedx+json",
+    mtls_cert: Optional[Path] = None,
+    mtls_key: Optional[Path] = None,
+    ca_cert: Optional[Path] = None,
+) -> bool:
+    """Directly query OCI 1.1 Referrers API over HTTPS with optional mTLS client certs."""
+    parsed = resolve_image_ref(image_ref)
+    registry = parsed["registry"]
+    repository = parsed["repository"]
+    ref = parsed["digest"] or parsed["tag"]
+
+    scheme = "http" if registry.startswith(("localhost", "127.0.0.1")) else "https"
+    ctx = ssl.create_default_context(
+        cafile=str(ca_cert) if ca_cert and ca_cert.exists() else None
+    )
+    if mtls_cert and mtls_key and mtls_cert.exists() and mtls_key.exists():
+        ctx.load_cert_chain(certfile=str(mtls_cert), keyfile=str(mtls_key))
+
+    referrers_url = f"{scheme}://{registry}/v2/{repository}/referrers/{ref}?artifactType={artifact_type}"
+    print(f"[*] Querying OCI 1.1 Referrers API directly: {referrers_url}", file=sys.stderr)
+    try:
+        req = urllib.request.Request(referrers_url, headers={"Accept": "application/vnd.oci.image.index.v1+json"})
+        with urllib.request.urlopen(req, context=ctx, timeout=20.0) as resp:
+            if resp.status != 200:
+                return False
+            index_data = json.loads(resp.read().decode("utf-8"))
+        manifests = index_data.get("manifests") or []
+        if not manifests:
+            return False
+        target_digest = None
+        for m in manifests:
+            anns = m.get("annotations") or {}
+            if anns.get("io.cyclonedx.type") == "cbom":
+                target_digest = m.get("digest")
+                break
+        if not target_digest:
+            target_digest = manifests[0].get("digest")
+        if not target_digest:
+            return False
+
+        blob_url = f"{scheme}://{registry}/v2/{repository}/blobs/{target_digest}"
+        blob_req = urllib.request.Request(blob_url)
+        with urllib.request.urlopen(blob_req, context=ctx, timeout=20.0) as bresp:
+            if bresp.status == 200:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_bytes(bresp.read())
+                print(f"[+] Successfully fetched OCI 1.1 referrer CBOM -> {output_path}", file=sys.stderr)
+                return True
+    except Exception as exc:
+        print(f"[-] Direct OCI 1.1 Referrers fetch failed: {exc}", file=sys.stderr)
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Fetch OCI 1.1 / ORAS attached CBOM/SBOM artifacts from registries.")
     parser.add_argument("image", help="Container image reference (e.g. ghcr.io/org/repo:tag or image@sha256:...)")
     parser.add_argument("-o", "--output", type=Path, default=Path("oss/upstream_cbom.json"), help="Output path for fetched CBOM")
     parser.add_argument("--artifact-type", default="application/vnd.cyclonedx+json", help="Expected OCI artifactType filter")
+    parser.add_argument("--mtls-cert", type=Path, help="Optional mTLS client certificate PEM")
+    parser.add_argument("--mtls-key", type=Path, help="Optional mTLS client private key PEM")
+    parser.add_argument("--ca-cert", type=Path, help="Optional custom CA certificate PEM")
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
-    # 1. Try ORAS CLI
+    # 1. Try direct OCI 1.1 Referrers API (supports mTLS natively for Trusted OSS / Harbor)
+    if args.mtls_cert or args.mtls_key:
+        if try_fetch_via_http_referrers(
+            args.image,
+            args.output,
+            artifact_type=args.artifact_type,
+            mtls_cert=args.mtls_cert,
+            mtls_key=args.mtls_key,
+            ca_cert=args.ca_cert,
+        ):
+            sys.exit(0)
+
+    # 2. Try ORAS CLI
     if try_fetch_via_oras(args.image, args.output, args.artifact_type):
         sys.exit(0)
 
-    # 2. Try regctl CLI
+    # 3. Try regctl CLI
     if try_fetch_via_regctl(args.image, args.output):
+        sys.exit(0)
+
+    # 4. Fallback to direct OCI 1.1 Referrers HTTP API
+    if try_fetch_via_http_referrers(
+        args.image,
+        args.output,
+        artifact_type=args.artifact_type,
+        mtls_cert=args.mtls_cert,
+        mtls_key=args.mtls_key,
+        ca_cert=args.ca_cert,
+    ):
         sys.exit(0)
 
     print(f"[-] No attached OCI CBOM discovered for {args.image} via available tooling.", file=sys.stderr)

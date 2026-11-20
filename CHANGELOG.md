@@ -5,6 +5,18 @@ All notable changes to `jsi-bom-actions` composite action and reusable workflows
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-20
+
+### Added
+- **Trusted OSS Upstream Signed CBOM Integration ([ADR 0001](docs/adr/0001-trusted-oss-upstream-cbom-assimilation.md))**:
+  - Added `scripts/fetch_trusted_oss_cbom.py` to batch-query `POST /bom/batch` on a self-hosted `trusted-oss-harbor` registry over HTTPS + mTLS, verify detached **GPG** and **NIST FIPS 204 ML-DSA-65** signatures against `/keys/trusted-oss-pubkey.asc` and `/keys/trusted-oss-mldsa65.pub`, and output a verified CBOM bundle (`oss/trusted_oss_cboms.json`).
+  - Added opt-in inputs to `action.yml`: `trusted-oss-url`, `trusted-oss-mtls-cert`, `trusted-oss-mtls-key`, `trusted-oss-verify-signatures`, `trusted-oss-strict-pqc`, and `trusted-oss-warm-missing`.
+  - Extended `scripts/fetch_oci_cbom.py` with `--mtls-cert`, `--mtls-key`, `--ca-cert`, and direct OCI 1.1 Referrers API fallback.
+- **CycloneDX 1.6 & `VERIFIED_INERT` Assimilation in `scripts/analyze_cbom.py`**:
+  - Upgraded `load_catalog()` to natively ingest `TrustedOSS-CBOM-Bundle` and standard CycloneDX 1.6 CBOMs (`metadata.component.purl` + `cryptographic-asset` components), crediting `VERIFIED_INERT` packages and giving verified Trusted OSS attestations precedence over static catalog heuristics.
+  - Added Trusted OSS vs. static catalog attribution in the **Cryptographic Supply Chain Coverage & Confidence** scorecard.
+- **Unit Tests**: Added `tests/test_trusted_oss_cbom.py`.
+
 ## [1.1.1] - 2026-11-14
 
 ### Fixed

@@ -51,58 +51,162 @@ SYMMETRIC_CLASSICAL = {
 }
 
 
+def _extract_crypto_assets_from_cdx_components(
+    ext_comps: List[Dict[str, Any]],
+    remediation_note: str,
+) -> List[Dict[str, Any]]:
+    """Extract normalized cryptoAssets list from CycloneDX 1.6 cryptographic-asset components."""
+    assets: List[Dict[str, Any]] = []
+    for ec in ext_comps:
+        crypto_props = ec.get("cryptoProperties") or {}
+        if not crypto_props and ec.get("type") not in ("cryptographic-asset", "crypto"):
+            continue
+        c_name = str(ec.get("name") or "Crypto Asset")
+        algo_details = crypto_props.get("algorithmProperties") or {}
+        proto_details = crypto_props.get("protocolProperties") or {}
+        cert_details = crypto_props.get("certificateProperties") or {}
+
+        algo_name = str(algo_details.get("name") or c_name)
+        primitive = str(
+            algo_details.get("primitive")
+            or ("protocol" if proto_details else "")
+            or ("certificate" if cert_details else "")
+            or crypto_props.get("assetType")
+            or "unknown"
+        )
+        key_length = str(
+            algo_details.get("parameterSetIdentifier")
+            or algo_details.get("keyLength")
+            or proto_details.get("version")
+            or cert_details.get("certificateFormat")
+            or "N/A"
+        )
+        algo_u = f"{algo_name} {c_name}".upper()
+        pqc_status = (
+            "POST-QUANTUM READY"
+            if any(re.search(p, algo_u) for p in POST_QUANTUM_PATTERNS)
+            else (
+                "QUANTUM-VULNERABLE"
+                if any(re.search(p, algo_u) for p in QUANTUM_VULNERABLE_PATTERNS)
+                else "CLASSICAL/SYMMETRIC"
+            )
+        )
+        assets.append({
+            "name": c_name,
+            "primitive": primitive,
+            "algorithm": algo_name,
+            "pqc_status": pqc_status,
+            "key_length": key_length,
+            "remediation": remediation_note,
+        })
+    return assets
+
+
+def _build_catalog_entry_from_cbom_doc(
+    cbom_doc: Dict[str, Any],
+    source_label: str,
+    override_purl: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Convert a standard CycloneDX 1.6 CBOM document into a catalog entry (supporting VERIFIED_INERT)."""
+    meta = cbom_doc.get("metadata") or {}
+    meta_comp = meta.get("component") or {}
+    purl = override_purl or str(meta_comp.get("purl") or "")
+    comp_name = str(meta_comp.get("name") or "")
+    if not purl and not comp_name:
+        return None
+
+    assets = _extract_crypto_assets_from_cdx_components(
+        cbom_doc.get("components") or [],
+        remediation_note=f"Attested via {source_label}",
+    )
+    return {
+        "name": comp_name or purl.split("/")[-1].split("@")[0],
+        "purlPattern": f"^{re.escape(purl.split('@')[0])}(@.*)?$" if purl else None,
+        "exactPurl": purl,
+        "category": "upstream-signed-attestation",
+        "confidence": "HIGH",
+        "source": source_label,
+        "cryptoAssets": assets,
+    }
+
+
 def load_catalog(catalog_path: Optional[Path], external_cboms: Optional[List[Path]] = None) -> List[Dict[str, Any]]:
-    """Load known third-party CBOM catalog profiles and any external/upstream CBOMs."""
+    """Load external/Trusted OSS CBOMs (highest precedence) and static known CBOM catalog profiles."""
     default_path = Path(__file__).parent / "known_cbom_catalog.json"
     path_to_use = catalog_path or (default_path if default_path.exists() else None)
-    components = []
+    external_entries: List[Dict[str, Any]] = []
+    static_entries: List[Dict[str, Any]] = []
 
+    # 1. Ingest external, Trusted OSS bundle, or OCI-fetched CBOM files FIRST so signed
+    #    version-specific attestations take precedence over static catalog heuristics.
+    if external_cboms:
+        for ext_file in external_cboms:
+            if not ext_file.exists():
+                continue
+            try:
+                with open(ext_file, "r", encoding="utf-8") as f:
+                    ext_data = json.load(f)
+
+                # Format A: TrustedOSS-CBOM-Bundle produced by fetch_trusted_oss_cbom.py
+                if ext_data.get("bundleFormat") == "TrustedOSS-CBOM-Bundle":
+                    for purl, entry_data in (ext_data.get("entries") or {}).items():
+                        cbom_doc = entry_data.get("cbom") or {}
+                        sig_tags = []
+                        if entry_data.get("verified_gpg"):
+                            sig_tags.append("GPG")
+                        if entry_data.get("verified_mldsa65"):
+                            sig_tags.append("ML-DSA-65")
+                        sig_suffix = f" ({' + '.join(sig_tags)} verified)" if sig_tags else ""
+                        source_label = f"Trusted OSS Signed CBOM{sig_suffix}"
+                        cat_entry = _build_catalog_entry_from_cbom_doc(
+                            cbom_doc,
+                            source_label=source_label,
+                            override_purl=purl,
+                        )
+                        if cat_entry:
+                            external_entries.append(cat_entry)
+                    continue
+
+                # Format B: Standard CycloneDX 1.6 CBOM with metadata.component
+                meta_comp = (ext_data.get("metadata") or {}).get("component") or {}
+                if meta_comp.get("purl") or meta_comp.get("name"):
+                    cat_entry = _build_catalog_entry_from_cbom_doc(
+                        ext_data,
+                        source_label=f"OCI / Upstream Vendor Attestation ({ext_file.name})",
+                    )
+                    if cat_entry:
+                        external_entries.append(cat_entry)
+                    continue
+
+                # Format C: Legacy flat component list with embedded cryptoProperties
+                for ec in ext_data.get("components", []):
+                    c_name = ec.get("name") or "External Dependency"
+                    c_purl = ec.get("purl") or ""
+                    c_crypto_assets = _extract_crypto_assets_from_cdx_components(
+                        [ec],
+                        remediation_note="Vendor provided attestation via OCI 1.1 / ORAS CBOM",
+                    )
+                    external_entries.append({
+                        "name": c_name,
+                        "purlPattern": f"^{re.escape(c_purl.split('@')[0])}(@.*)?$" if c_purl else None,
+                        "category": "upstream-vendor-attestation",
+                        "confidence": "HIGH",
+                        "source": f"OCI / Upstream Vendor Attestation ({ext_file.name})",
+                        "cryptoAssets": c_crypto_assets,
+                    })
+            except Exception as e:
+                print(f"Warning: Failed to parse external CBOM {ext_file}: {e}", file=sys.stderr)
+
+    # 2. Load static known_cbom_catalog.json as fallback
     if path_to_use and path_to_use.exists():
         try:
             with open(path_to_use, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                components.extend(data.get("components", []))
+                static_entries.extend(data.get("components", []))
         except Exception as e:
             print(f"Warning: Failed to load CBOM catalog {path_to_use}: {e}", file=sys.stderr)
 
-    # Ingest external or OCI-fetched CBOM files if provided
-    if external_cboms:
-        for ext_file in external_cboms:
-            if ext_file.exists():
-                try:
-                    with open(ext_file, "r", encoding="utf-8") as f:
-                        ext_data = json.load(f)
-                        ext_comps = ext_data.get("components", [])
-                        for ec in ext_comps:
-                            c_name = ec.get("name") or "External Dependency"
-                            c_purl = ec.get("purl") or ""
-                            crypto_props = ec.get("cryptoProperties", {})
-                            c_crypto_assets = []
-                            if crypto_props:
-                                algo_details = crypto_props.get("algorithmProperties", {})
-                                algo_name = str(algo_details.get("name") or c_name)
-                                c_crypto_assets.append({
-                                    "name": f"{c_name} Crypto Asset",
-                                    "primitive": str(algo_details.get("primitive") or "unknown"),
-                                    "algorithm": algo_name,
-                                    "pqc_status": "POST-QUANTUM READY" if any(re.search(p, algo_name.upper()) for p in POST_QUANTUM_PATTERNS) else (
-                                        "QUANTUM-VULNERABLE" if any(re.search(p, algo_name.upper()) for p in QUANTUM_VULNERABLE_PATTERNS) else "CLASSICAL/SYMMETRIC"
-                                    ),
-                                    "key_length": str(algo_details.get("parameterSetIdentifier") or algo_details.get("keyLength") or "N/A"),
-                                    "remediation": "Vendor provided attestation via OCI 1.1 / ORAS CBOM"
-                                })
-                            components.append({
-                                "name": c_name,
-                                "purlPattern": f"^{re.escape(c_purl.split('@')[0])}(@.*)?$" if c_purl else None,
-                                "category": "upstream-vendor-attestation",
-                                "confidence": "HIGH",
-                                "source": f"OCI / Upstream Vendor Attestation ({ext_file.name})",
-                                "cryptoAssets": c_crypto_assets
-                            })
-                except Exception as e:
-                    print(f"Warning: Failed to parse external CBOM {ext_file}: {e}", file=sys.stderr)
-
-    return components
+    return external_entries + static_entries
 
 
 def parse_sbom_components(sbom_path: Path) -> List[Dict[str, Any]]:
@@ -178,9 +282,13 @@ def assimilate_third_party_cbom(
         matched_cat = None
 
         for cat_entry in catalog:
+            exact_purl = cat_entry.get("exactPurl")
             purl_pat = cat_entry.get("purlPattern")
             name_pat = cat_entry.get("name")
-            if purl_pat and purl and re.search(purl_pat, purl, re.IGNORECASE):
+            if exact_purl and purl and exact_purl.lower() == purl.lower():
+                matched_cat = cat_entry
+                break
+            elif purl_pat and purl and re.search(purl_pat, purl, re.IGNORECASE):
                 matched_cat = cat_entry
                 break
             elif name_pat and (
@@ -222,7 +330,14 @@ def assimilate_third_party_cbom(
             unassimilated.append(comp)
 
     total_deps = len(sbom_components)
+    trusted_oss_verified_names = {
+        a["component_name"] for a in assimilated_crypto if "Trusted OSS" in a.get("source", "")
+    } | {
+        v["name"] for v in verified_inert if "Trusted OSS" in v.get("source", "")
+    }
     verified_count = len({a["component_name"] for a in assimilated_crypto}) + len(verified_inert)
+    trusted_oss_count = len(trusted_oss_verified_names)
+    static_catalog_count = max(0, verified_count - trusted_oss_count)
 
     if total_deps > 0:
         coverage_pct = round((verified_count / total_deps) * 100, 1)
@@ -245,6 +360,8 @@ def assimilate_third_party_cbom(
     confidence_metrics = {
         "total_dependencies": total_deps,
         "verified_dependencies_count": verified_count,
+        "trusted_oss_verified_count": trusted_oss_count,
+        "static_catalog_verified_count": static_catalog_count,
         "unassimilated_dependencies_count": len(unassimilated),
         "coverage_percentage": coverage_pct,
         "confidence_score": confidence_score,
@@ -459,7 +576,10 @@ def generate_markdown_summary(summary: dict) -> str:
     fp_label = f"{fp_count} Crypto Primitive(s) Inventoried{lang_str}" if fp_count > 0 else "0 Custom Primitives"
     md.append(f"| **First-Party Code (`src/`, `scripts/`)** | **100% Audited** ({fp_label}) | 🟢 **HIGH** (Direct AST & SAST verified) |")
     if conf["total_dependencies"] > 0:
-        md.append(f"| **Third-Party Supply Chain** | **{conf['coverage_percentage']}%** ({conf['verified_dependencies_count']} of {conf['total_dependencies']} dependencies cataloged) | {conf['confidence_badge']} (Known profiles assimilated) |")
+        t_oss = conf.get("trusted_oss_verified_count", 0)
+        s_cat = conf.get("static_catalog_verified_count", conf["verified_dependencies_count"])
+        breakdown = f"{t_oss} Trusted OSS signed CBOM, {s_cat} static catalog" if t_oss > 0 else "Known profiles assimilated"
+        md.append(f"| **Third-Party Supply Chain** | **{conf['coverage_percentage']}%** ({conf['verified_dependencies_count']} of {conf['total_dependencies']} dependencies cataloged) | {conf['confidence_badge']} ({breakdown}) |")
         md.append(f"| **Overall Audit Confidence Score** | **{conf['confidence_score']}%** | {conf['confidence_badge']} ({conf['unassimilated_dependencies_count']} unassimilated supply chain dependencies) |\n")
     else:
         md.append("| **Third-Party Supply Chain** | **No external dependencies in SBOM** | 🟢 **HIGH** (Self-contained scope) |\n")

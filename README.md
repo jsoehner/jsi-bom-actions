@@ -42,7 +42,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Multi-Language SBOM, CBOM & PQC Governance
-        uses: jsoehner/jsi-bom-actions@v1.1.0 # Pinned to v1.1.0
+        uses: jsoehner/jsi-bom-actions@v1.2.0 # Pinned to v1.2.0
         with:
           target-dir: '.'
           output-dir: 'oss'
@@ -50,7 +50,13 @@ jobs:
           comment-pr: 'true'
           upload-artifacts: 'true'
           retention-days: '90'
+          # Optional: resolve signed upstream CBOMs from Trusted OSS Harbor (mTLS)
+          trusted-oss-url: ${{ vars.TRUSTED_OSS_CACHE_URL }}
+          trusted-oss-mtls-cert: ${{ secrets.OSS_MTLS_CLIENT_CERT }}
+          trusted-oss-mtls-key: ${{ secrets.OSS_MTLS_CLIENT_KEY }}
 ```
+
+> **Trusted OSS Integration ([ADR 0001](docs/adr/0001-trusted-oss-upstream-cbom-assimilation.md))**: When `trusted-oss-url` is provided, the action queries `POST <trusted-oss-url>/bom/batch` over mTLS, verifies detached GPG and NIST FIPS 204 ML-DSA-65 signatures, and assimilates both crypto-bearing and `VERIFIED_INERT` attestations—eliminating third-party cryptographic blind spots. When unset, the step is a no-op and uses the built-in catalog.
 
 No local scripts or installation commands required. The action runs self-contained in GitHub Actions runners.
 
@@ -162,6 +168,12 @@ Third-party dependencies represent the vast majority of cryptographic attack sur
 | `upload-artifacts` | Upload BOM artifacts to workflow run | `true` | No |
 | `artifact-name` | Name of the uploaded workflow artifact bundle | `bom-artifacts` | No |
 | `retention-days` | Days to retain uploaded workflow artifacts | `90` | No |
+| `trusted-oss-url` | Optional Trusted OSS Gatekeeper base URL (e.g. `https://jsigroup.ddns.net`) for signed upstream CBOM lookup | `''` | No |
+| `trusted-oss-mtls-cert` | Optional PEM client certificate for pfSense HAProxy mTLS authentication to Trusted OSS | `''` | No |
+| `trusted-oss-mtls-key` | Optional PEM client private key for pfSense HAProxy mTLS authentication to Trusted OSS | `''` | No |
+| `trusted-oss-verify-signatures` | Verify GPG / NIST FIPS 204 ML-DSA-65 signatures on fetched Trusted OSS CBOMs | `true` | No |
+| `trusted-oss-strict-pqc` | Require valid NIST FIPS 204 ML-DSA-65 signature on every assimilated Trusted OSS CBOM | `false` | No |
+| `trusted-oss-warm-missing` | Ask Trusted OSS to enqueue cache-missed PURLs for background warming | `false` | No |
 
 ### Outputs
 

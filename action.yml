@@ -42,6 +42,30 @@ inputs:
     description: 'Retention period in days for uploaded artifacts'
     required: false
     default: '90'
+  trusted-oss-url:
+    description: 'Optional Trusted OSS Gatekeeper base URL (e.g. https://jsigroup.ddns.net) for signed upstream CBOM lookup'
+    required: false
+    default: ''
+  trusted-oss-mtls-cert:
+    description: 'Optional PEM client certificate for pfSense HAProxy mTLS authentication to Trusted OSS'
+    required: false
+    default: ''
+  trusted-oss-mtls-key:
+    description: 'Optional PEM client private key for pfSense HAProxy mTLS authentication to Trusted OSS'
+    required: false
+    default: ''
+  trusted-oss-verify-signatures:
+    description: 'Verify GPG / NIST FIPS 204 ML-DSA-65 signatures on fetched Trusted OSS CBOMs'
+    required: false
+    default: 'true'
+  trusted-oss-strict-pqc:
+    description: 'Require valid NIST FIPS 204 ML-DSA-65 signature on every assimilated Trusted OSS CBOM'
+    required: false
+    default: 'false'
+  trusted-oss-warm-missing:
+    description: 'Ask Trusted OSS to enqueue cache-missed PURLs for background warming'
+    required: false
+    default: 'false'
 
 outputs:
   sbom-cyclonedx:
@@ -127,18 +151,62 @@ runs:
       run: |
         bash "${{ github.action_path }}/scripts/test_boms.sh" "${{ inputs.output-dir }}"
 
+    - name: Fetch Signed Upstream CBOMs from Trusted OSS Registry
+      if: inputs.trusted-oss-url != ''
+      shell: bash
+      env:
+        TRUSTED_OSS_URL: ${{ inputs.trusted-oss-url }}
+        OSS_MTLS_CLIENT_CERT: ${{ inputs.trusted-oss-mtls-cert }}
+        OSS_MTLS_CLIENT_KEY: ${{ inputs.trusted-oss-mtls-key }}
+        TRUSTED_OSS_VERIFY: ${{ inputs.trusted-oss-verify-signatures }}
+        TRUSTED_OSS_STRICT_PQC: ${{ inputs.trusted-oss-strict-pqc }}
+        TRUSTED_OSS_WARM_MISSING: ${{ inputs.trusted-oss-warm-missing }}
+      run: |
+        TLS_DIR=$(mktemp -d "${RUNNER_TEMP:-/tmp}/oss-tls.XXXXXX")
+        chmod 0700 "$TLS_DIR"
+        trap 'rm -rf "$TLS_DIR"' EXIT
+
+        MTLS_ARGS=()
+        if [ -n "$OSS_MTLS_CLIENT_CERT" ] && [ -n "$OSS_MTLS_CLIENT_KEY" ]; then
+          printf '%s\n' "$OSS_MTLS_CLIENT_CERT" > "$TLS_DIR/client.crt"
+          printf '%s\n' "$OSS_MTLS_CLIENT_KEY" > "$TLS_DIR/client.key"
+          chmod 0600 "$TLS_DIR/client.key"
+          MTLS_ARGS+=(--mtls-cert "$TLS_DIR/client.crt" --mtls-key "$TLS_DIR/client.key")
+        fi
+
+        EXTRA_ARGS=()
+        if [ "$TRUSTED_OSS_VERIFY" != "true" ]; then
+          EXTRA_ARGS+=(--no-verify)
+        fi
+        if [ "$TRUSTED_OSS_STRICT_PQC" = "true" ]; then
+          EXTRA_ARGS+=(--strict-pqc)
+        fi
+        if [ "$TRUSTED_OSS_WARM_MISSING" = "true" ]; then
+          EXTRA_ARGS+=(--warm-missing)
+        fi
+
+        python3 "${{ github.action_path }}/scripts/fetch_trusted_oss_cbom.py" \
+          --url "$TRUSTED_OSS_URL" \
+          --sbom "${{ inputs.output-dir }}/sbom.cyclonedx.json" \
+          --output "${{ inputs.output-dir }}/trusted_oss_cboms.json" \
+          "${MTLS_ARGS[@]}" \
+          "${EXTRA_ARGS[@]}" || echo "::warning::Trusted OSS CBOM resolution encountered an error; continuing with local catalog."
+
     - name: Generate PQC Migration Dashboard & Step Summary
       shell: bash
       run: |
-        EXT_ARG=""
+        EXT_ARGS=()
+        if [ -f "${{ inputs.output-dir }}/trusted_oss_cboms.json" ]; then
+          EXT_ARGS+=(--external-cbom "${{ inputs.output-dir }}/trusted_oss_cboms.json")
+        fi
         if [ -f "${{ inputs.output-dir }}/upstream_cbom.json" ]; then
-          EXT_ARG="--external-cbom ${{ inputs.output-dir }}/upstream_cbom.json"
+          EXT_ARGS+=(--external-cbom "${{ inputs.output-dir }}/upstream_cbom.json")
         fi
         python3 "${{ github.action_path }}/scripts/analyze_cbom.py" \
           "${{ inputs.output-dir }}/cbom.json" \
           --sbom "${{ inputs.output-dir }}/sbom.cyclonedx.json" \
           --catalog "${{ github.action_path }}/scripts/known_cbom_catalog.json" \
-          $EXT_ARG \
+          "${EXT_ARGS[@]}" \
           --json "${{ inputs.output-dir }}/crypto-analysis.json" \
           --markdown "${{ inputs.output-dir }}/crypto-summary.md" \
           --step-summary
